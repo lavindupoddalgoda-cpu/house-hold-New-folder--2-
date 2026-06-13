@@ -1,0 +1,2266 @@
+# 🛒 HomeNest LK — Production E-Commerce · Prompt v3
+### Next.js 14 App Router · TypeScript · Firebase v10 Modular · Zustand · Framer Motion · GSAP · Lenis · World-Class UI
+
+---
+
+## 🚨 AI AGENT: READ BEFORE WRITING A SINGLE FILE
+
+1. **Read this entire prompt in full** before generating any code.
+2. Implement **EVERY** feature described — no stubs, no `// implement later` comments, no empty functions.
+3. After completing all files, run the **MANDATORY TROUBLESHOOTING PROTOCOL** in Section 14 before presenting output.
+4. TypeScript strictly throughout — no bare `any` type except where unavoidable (add `// eslint-disable-next-line @typescript-eslint/no-explicit-any` comment with justification).
+5. Every component that has interactivity or browser APIs is a Client Component with `'use client'` at the top.
+6. All Firebase Firestore/Storage operations are wrapped in `try/catch` with `addToast` on error.
+7. **CRITICAL:** Every `fetch()` call **MUST** check `res.ok` before calling `.res.json()`. Read the error as `res.text()` and display in a toast. Failure to do this causes the infamous `"Unexpected token '<'"` crash when APIs return HTML error pages.
+8. Never put secrets in client-side code. Only `NEXT_PUBLIC_` vars go to the browser. `PAYHERE_MERCHANT_SECRET` lives only in API routes.
+9. Use AI-generated placeholder images from **Unsplash** (`https://images.unsplash.com/photo-{id}?w=800&q=80`) for all products, categories, hero, and banners. Pick relevant photos per subject.
+
+---
+
+## ⚠️ ARCHITECTURE DECISIONS
+
+This is a **Next.js 14 App Router** project with TypeScript. It is NOT Vanilla JS. It is NOT a single HTML file.
+
+|
+ Concern 
+|
+ Solution 
+|
+|
+---------
+|
+----------
+|
+|
+ Framework 
+|
+ Next.js 14 (App Router) 
+|
+|
+ Language 
+|
+ TypeScript (.tsx/.ts) 
+|
+|
+ Styling 
+|
+ Tailwind CSS (PostCSS config, NOT CDN) 
+|
+|
+ Firebase 
+|
+ Modular SDK v10 (
+`import { initializeApp } from 'firebase/app'`
+) 
+|
+|
+ State 
+|
+ Zustand with localStorage persistence 
+|
+|
+ Routing 
+|
+ Next.js file-based routing (no hash routes) 
+|
+|
+ Animations 
+|
+ Framer Motion + GSAP + Lenis smooth scroll 
+|
+|
+ Icons 
+|
+ Lucide React (npm package) 
+|
+|
+ Charts 
+|
+ Recharts (admin dashboard) 
+|
+|
+ Forms 
+|
+ React Hook Form + Zod validation 
+|
+|
+ PayHere Backend 
+|
+ Next.js API Routes (
+`/src/app/api/payhere/`
+) 
+|
+|
+ Secrets 
+|
+`.env.local`
+ — never hardcoded 
+|
+|
+ Image Optimization 
+|
+`next/image`
+ with Unsplash remote patterns 
+|
+
+---
+
+## 📁 COMPLETE FILE STRUCTURE
+
+```
+homenest-lk/
+├── .env.local                           ← secrets (gitignored)
+├── .env.example                         ← template (committed)
+├── next.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+├── package.json
+├── public/
+│   ├── logo.svg
+│   └── placeholder.jpg
+├── src/
+│   ├── app/
+│   │   ├── layout.tsx                   ← root layout (fonts, providers)
+│   │   ├── page.tsx                     ← homepage (full landing page)
+│   │   ├── globals.css
+│   │   ├── providers.tsx                ← client-side providers
+│   │   ├── catalog/page.tsx
+│   │   ├── product/[id]/page.tsx
+│   │   ├── cart/page.tsx
+│   │   ├── checkout/page.tsx
+│   │   ├── account/page.tsx
+│   │   ├── orders/page.tsx
+│   │   ├── wishlist/page.tsx
+│   │   ├── order/[id]/page.tsx          ← order confirmation
+│   │   ├── admin/
+│   │   │   ├── layout.tsx               ← admin sidebar layout
+│   │   │   ├── page.tsx                 ← dashboard
+│   │   │   ├── products/page.tsx
+│   │   │   ├── products/add/page.tsx
+│   │   │   ├── products/[id]/page.tsx
+│   │   │   ├── orders/page.tsx
+│   │   │   ├── orders/[id]/page.tsx
+│   │   │   ├── customers/page.tsx
+│   │   │   ├── customers/[id]/page.tsx
+│   │   │   ├── marketing/page.tsx
+│   │   │   └── settings/page.tsx
+│   │   └── api/
+│   │       ├── payhere/
+│   │       │   ├── hash/route.ts        ← generate PayHere MD5 hash
+│   │       │   └── notify/route.ts      ← PayHere IPN handler
+│   │       └── auth/session/route.ts
+│   ├── components/
+│   │   ├── ui/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Toast.tsx
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Skeleton.tsx
+│   │   │   └── Spinner.tsx
+│   │   ├── layout/
+│   │   │   ├── Preloader.tsx            ← animated brand preloader
+│   │   │   ├── CustomCursor.tsx         ← spring-physics cursor
+│   │   │   ├── Navbar.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   ├── MobileMenu.tsx
+│   │   │   └── SearchOverlay.tsx
+│   │   ├── home/
+│   │   │   ├── HeroSection.tsx
+│   │   │   ├── TrustBar.tsx
+│   │   │   ├── CategoryGrid.tsx
+│   │   │   ├── FeaturedProducts.tsx
+│   │   │   ├── BrandStory.tsx
+│   │   │   ├── BestSellers.tsx
+│   │   │   ├── Testimonials.tsx
+│   │   │   ├── StatsSection.tsx
+│   │   │   ├── PromoBanner.tsx
+│   │   │   └── Newsletter.tsx
+│   │   ├── ecommerce/
+│   │   │   ├── ProductCard.tsx
+│   │   │   ├── ProductGrid.tsx
+│   │   │   ├── ProductFilters.tsx
+│   │   │   ├── ProductGallery.tsx
+│   │   │   ├── ProductReviews.tsx
+│   │   │   ├── CartDrawer.tsx
+│   │   │   ├── CartItem.tsx
+│   │   │   ├── CheckoutForm.tsx
+│   │   │   ├── OrderSummary.tsx
+│   │   │   ├── WishlistButton.tsx
+│   │   │   └── QuickViewModal.tsx
+│   │   └── admin/
+│   │       ├── AdminGuard.tsx
+│   │       ├── AdminSidebar.tsx
+│   │       ├── AdminHeader.tsx
+│   │       ├── ProductForm.tsx
+│   │       ├── ImageUploader.tsx
+│   │       ├── RevenueChart.tsx
+│   │       ├── OrdersTable.tsx
+│   │       └── StatsCard.tsx
+│   ├── lib/
+│   │   ├── firebase.ts                  ← client-side Firebase modular
+│   │   ├── firebaseAdmin.ts             ← server-side Firebase Admin
+│   │   └── utils.ts
+│   ├── hooks/
+│   │   ├── useProducts.ts
+│   │   ├── useAuth.ts
+│   │   ├── useCart.ts
+│   │   └── useScrollAnimations.ts
+│   ├── store/
+│   │   └── useStore.ts                  ← Zustand global store
+│   └── types/
+│       ├── index.ts                     ← all interfaces
+│       └── payhere.d.ts                 ← global window.payhere type
+├── firestore.rules
+├── storage.rules
+└── firestore.indexes.json
+```
+
+---
+
+## 📦 PACKAGE.JSON
+
+```json
+{
+  "name": "homenest-lk",
+  "version": "3.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.2",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "firebase": "^10.12.0",
+    "firebase-admin": "^12.2.0",
+    "zustand": "^4.5.4",
+    "framer-motion": "^11.2.13",
+    "gsap": "^3.12.5",
+    "@gsap/react": "^2.1.1",
+    "@studio-freight/lenis": "^1.0.45",
+    "lucide-react": "^0.395.0",
+    "recharts": "^2.12.7",
+    "react-hot-toast": "^2.4.1",
+    "react-hook-form": "^7.52.1",
+    "zod": "^3.23.8",
+    "@hookform/resolvers": "^3.6.0",
+    "next-themes": "^0.3.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0",
+    "class-variance-authority": "^0.7.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.4",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5"
+  }
+}
+```
+
+---
+
+## 🔑 ENVIRONMENT VARIABLES
+
+**`.env.example`** (commit this to git):
+```env
+# ── Firebase Client (NEXT_PUBLIC_ = safe to expose to browser) ──────────────
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+
+# ── Firebase Admin (SERVER ONLY — never prefix NEXT_PUBLIC_) ─────────────────
+FIREBASE_ADMIN_PROJECT_ID=
+FIREBASE_ADMIN_CLIENT_EMAIL=
+FIREBASE_ADMIN_PRIVATE_KEY=
+
+# ── PayHere (SERVER ONLY — never expose to browser) ──────────────────────────
+PAYHERE_MERCHANT_ID=
+PAYHERE_MERCHANT_SECRET=
+
+# ── App ──────────────────────────────────────────────────────────────────────
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_PAYHERE_SANDBOX=true
+NEXT_PUBLIC_ADMIN_EMAIL=admin@homestlk.com
+```
+
+**`.env.local`** — developer fills actual values. Gitignored. Never commit.
+
+---
+
+## ⚙️ NEXT.JS CONFIG
+
+```typescript
+// next.config.ts
+import type { NextConfig } from 'next';
+
+const config: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'source.unsplash.com' },
+    ],
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
+  },
+};
+
+export default config;
+```
+
+---
+
+## 🎨 TAILWIND CONFIG (Full Design Token System)
+
+```typescript
+// tailwind.config.ts
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50:  '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0',
+          300: '#86efac', 400: '#4ade80', 500: '#22c55e',
+          600: '#10B981', 700: '#047857', 800: '#065f46', 900: '#064e3b',
+        },
+        gold:     { 400: '#FBBF24', 500: '#F59E0B', 600: '#D97706' },
+        cream:    '#FAFAF7',
+        charcoal: '#1C1C1E',
+        navy:     '#0F172A',
+      },
+      fontFamily: {
+        sans:    ['var(--font-plus-jakarta)', 'system-ui', 'sans-serif'],
+        serif:   ['var(--font-cormorant)', 'Georgia', 'serif'],
+        display: ['var(--font-playfair)', 'Georgia', 'serif'],
+      },
+      animation: {
+        'fade-in':    'fadeIn 0.6s ease forwards',
+        'slide-up':   'slideUp 0.8s cubic-bezier(0.16,1,0.3,1) forwards',
+        'float':      'float 6s ease-in-out infinite',
+        'shimmer':    'shimmer 2s linear infinite',
+        'marquee':    'marquee 30s linear infinite',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
+        'glow':       'glow 3s ease-in-out infinite',
+        'bounce-dot': 'bounceDot 1.4s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn:    { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        slideUp:   { '0%': { opacity:'0', transform:'translateY(40px)' }, '100%': { opacity:'1', transform:'translateY(0)' } },
+        float:     { '0%,100%': { transform:'translateY(0px)' }, '50%': { transform:'translateY(-20px)' } },
+        shimmer:   { '0%': { backgroundPosition:'-200% 0' }, '100%': { backgroundPosition:'200% 0' } },
+        marquee:   { '0%': { transform:'translateX(0)' }, '100%': { transform:'translateX(-50%)' } },
+        glow:      { '0%,100%': { boxShadow:'0 0 20px rgba(16,185,129,0.3)' }, '50%': { boxShadow:'0 0 50px rgba(16,185,129,0.6)' } },
+        bounceDot: { '0%,80%,100%': { transform:'scale(0)' }, '40%': { transform:'scale(1)' } },
+      },
+      boxShadow: {
+        'glass':      '0 8px 32px 0 rgba(31,38,135,0.07)',
+        'glow-sm':    '0 0 15px rgba(16,185,129,0.3)',
+        'glow-md':    '0 0 30px rgba(16,185,129,0.4)',
+        'card':       '0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04)',
+        'card-hover': '0 8px 24px rgba(0,0,0,0.10), 0 20px 48px rgba(0,0,0,0.08)',
+      },
+      backdropBlur: { xs: '2px' },
+    },
+  },
+  plugins: [],
+};
+export default config;
+```
+
+---
+
+## 🔥 FIREBASE SETUP — MODULAR SDK v10
+
+### `src/lib/firebase.ts` (Client-side only)
+```typescript
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth }      from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage }   from 'firebase/storage';
+
+const firebaseConfig = {
+  apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+};
+
+// Prevent duplicate initialization in dev (HMR)
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+export const auth    = getAuth(app);
+export const db      = getFirestore(app);
+export const storage = getStorage(app);
+export default app;
+```
+
+### `src/lib/firebaseAdmin.ts` (Server-side API routes ONLY)
+```typescript
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getAuth }      from 'firebase-admin/auth';
+
+function getAdminApp() {
+  if (getApps().length > 0) return getApps()[0];
+  return initializeApp({
+    credential: cert({
+      projectId:   process.env.FIREBASE_ADMIN_PROJECT_ID!,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL!,
+      privateKey:  process.env.FIREBASE_ADMIN_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+export const adminDb   = getFirestore(getAdminApp());
+export const adminAuth = getAuth(getAdminApp());
+```
+
+---
+
+## 🗃️ TYPESCRIPT TYPES — `src/types/index.ts`
+
+Define complete TypeScript interfaces for:
+
+```typescript
+export interface Product {
+  id: string; productName: string; sku: string; category: string; brand: string;
+  shortDescription: string; description: string;
+  costPrice: number; sellingPrice: number; discountPrice: number;
+  stock: number; weight: number;
+  dimensions: { length: number; width: number; height: number };
+  variants: { type: string; values: string[] }[];
+  tags: string[]; featured: boolean; isActive: boolean;
+  images: string[]; thumbnails: string[];
+  createdAt: { seconds: number; nanoseconds: number };
+  updatedAt: { seconds: number; nanoseconds: number };
+}
+
+export interface CartItem {
+  productId: string; productName: string; price: number; image: string;
+  quantity: number; stock: number;
+  variant?: { type: string; value: string };
+}
+
+export interface Order {
+  id: string; userId: string;
+  customer: { firstName: string; lastName: string; email: string; phone: string };
+  items: CartItem[]; subtotal: number; shippingFee: number; discount: number; total: number;
+  couponCode: string | null;
+  paymentMethod: 'payhere' | 'bank_transfer' | 'cod';
+  paymentStatus: 'pending' | 'paid' | 'failed';
+  status: 'processing' | 'pending_cod' | 'pending_payment' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
+  shippingAddress: Address; deliveryType: 'standard' | 'express';
+  trackingNumber: string | null;
+  createdAt: { seconds: number; nanoseconds: number };
+  updatedAt: { seconds: number; nanoseconds: number };
+}
+
+export interface UserProfile {
+  uid: string; displayName: string; email: string; phone: string;
+  role: 'customer' | 'manager' | 'admin';
+  photoURL: string; banned: boolean;
+  createdAt: { seconds: number; nanoseconds: number };
+}
+
+export interface Address {
+  id?: string; label?: string; line1: string; line2?: string;
+  city: string; district: string; postalCode?: string; country: string; isDefault?: boolean;
+}
+
+export interface Category {
+  id: string; name: string; icon: string; imageURL?: string;
+  displayOrder: number; isActive: boolean;
+}
+
+export interface Banner {
+  id: string; title: string; subtitle: string; ctaText: string; ctaLink: string;
+  imageURL: string; displayOrder: number; isActive: boolean;
+}
+
+export interface Coupon {
+  code: string; type: 'percentage' | 'fixed'; value: number;
+  minOrderValue: number; maxUses: number; usedCount: number;
+  expiresAt: { seconds: number; nanoseconds: number }; isActive: boolean;
+}
+
+export interface Review {
+  id: string; productId: string; userId: string; displayName: string;
+  rating: number; text: string; isApproved: boolean;
+  createdAt: { seconds: number; nanoseconds: number };
+}
+
+// Store-wide constants
+export const STORE = {
+  name:                  process.env.NEXT_PUBLIC_STORE_NAME || 'HomeNest LK',
+  tagline:               'Elevate Your Living Space',
+  currency:              'LKR',
+  symbol:                'Rs.',
+  email:                 'hello@homestlk.com',
+  phone:                 '+94 77 000 0000',
+  address:               'Colombo, Sri Lanka',
+  adminEmail:            process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@homestlk.com',
+  freeShippingThreshold: 5000,
+  standardShippingFee:   350,
+  expressShippingFee:    650,
+} as const;
+
+export const SL_DISTRICTS = [
+  'Ampara','Anuradhapura','Badulla','Batticaloa','Colombo','Galle','Gampaha',
+  'Hambantota','Jaffna','Kalutara','Kandy','Kegalle','Kilinochchi','Kurunegala',
+  'Mannar','Matale','Matara','Monaragala','Mullaitivu','Nuwara Eliya',
+  'Polonnaruwa','Puttalam','Ratnapura','Trincomalee','Vavuniya',
+] as const;
+```
+
+### `src/types/payhere.d.ts` (Global type for PayHere SDK)
+```typescript
+interface PayHerePayment {
+  sandbox: boolean; merchant_id: string; return_url: string;
+  cancel_url: string; notify_url: string; order_id: string;
+  items: string; amount: string; currency: string; hash: string;
+  first_name: string; last_name: string; email: string;
+  phone: string; address: string; city: string; country: string;
+}
+declare global {
+  interface Window {
+    payhere: {
+      startPayment: (payment: PayHerePayment) => void;
+      onCompleted:  (orderId: string) => void;
+      onDismissed:  () => void;
+      onError:      (error: string) => void;
+    };
+  }
+}
+export {};
+```
+
+---
+
+## 🧠 ZUSTAND STORE — `src/store/useStore.ts`
+
+```typescript
+'use client';
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import type { CartItem, UserProfile } from '@/types';
+
+interface Toast { id: string; message: string; type: 'success'|'error'|'warning'|'info'; }
+
+interface StoreState {
+  // ── Cart ──
+  cart: CartItem[];
+  cartOpen: boolean;
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, qty: number) => void;
+  clearCart: () => void;
+  setCartOpen: (open: boolean) => void;
+  getCartTotal: () => number;
+  getCartCount: () => number;
+  // ── User ──
+  user: UserProfile | null;
+  authLoading: boolean;
+  wishlist: string[];
+  setUser: (user: UserProfile | null) => void;
+  setAuthLoading: (loading: boolean) => void;
+  addToWishlist: (id: string) => void;
+  removeFromWishlist: (id: string) => void;
+  setWishlist: (ids: string[]) => void;
+  // ── UI ──
+  searchOpen: boolean;
+  mobileMenuOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
+  setMobileMenuOpen: (open: boolean) => void;
+  toasts: Toast[];
+  addToast: (t: Omit) => void;
+  removeToast: (id: string) => void;
+  // ── Coupon ──
+  appliedCoupon: { code: string; type: 'percentage'|'fixed'; value: number } | null;
+  applyCoupon: (c: StoreState['appliedCoupon']) => void;
+  removeCoupon: () => void;
+}
+
+export const useStore = create()(
+  persist(
+    (set, get) => ({
+      // Cart
+      cart: [],
+      cartOpen: false,
+      addToCart: (item) => {
+        const existing = get().cart.find(c =>
+          c.productId === item.productId &&
+          JSON.stringify(c.variant) === JSON.stringify(item.variant)
+        );
+        if (existing) {
+          set({ cart: get().cart.map(c =>
+            c.productId === item.productId
+              ? { ...c, quantity: Math.min(c.quantity + item.quantity, item.stock) }
+              : c
+          )});
+        } else {
+          set({ cart: [...get().cart, item] });
+        }
+        set({ cartOpen: true });
+      },
+      removeFromCart: (id) => set({ cart: get().cart.filter(c => c.productId !== id) }),
+      updateQuantity: (id, qty) => {
+        if (qty < 1) { get().removeFromCart(id); return; }
+        set({ cart: get().cart.map(c => c.productId === id ? { ...c, quantity: qty } : c) });
+      },
+      clearCart: () => set({ cart: [] }),
+      setCartOpen: (open) => set({ cartOpen: open }),
+      getCartTotal: () => get().cart.reduce((s, i) => s + i.price * i.quantity, 0),
+      getCartCount: () => get().cart.reduce((s, i) => s + i.quantity, 0),
+      // User
+      user: null,
+      authLoading: true,
+      wishlist: [],
+      setUser: (user) => set({ user }),
+      setAuthLoading: (loading) => set({ authLoading: loading }),
+      addToWishlist: (id) => set({ wishlist: [...new Set([...get().wishlist, id])] }),
+      removeFromWishlist: (id) => set({ wishlist: get().wishlist.filter(w => w !== id) }),
+      setWishlist: (ids) => set({ wishlist: ids }),
+      // UI
+      searchOpen: false,
+      mobileMenuOpen: false,
+      setSearchOpen: (open) => set({ searchOpen: open }),
+      setMobileMenuOpen: (open) => set({ mobileMenuOpen: open }),
+      toasts: [],
+      addToast: (t) => {
+        const id = Math.random().toString(36).slice(2);
+        set({ toasts: [...get().toasts, { ...t, id }] });
+        setTimeout(() => get().removeToast(id), 3500);
+      },
+      removeToast: (id) => set({ toasts: get().toasts.filter(t => t.id !== id) }),
+      // Coupon
+      appliedCoupon: null,
+      applyCoupon: (c) => set({ appliedCoupon: c }),
+      removeCoupon: () => set({ appliedCoupon: null }),
+    }),
+    {
+      name: 'homenest-store-v3',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (s) => ({ cart: s.cart, wishlist: s.wishlist, appliedCoupon: s.appliedCoupon }),
+    }
+  )
+);
+```
+
+---
+
+## 🎬 ANIMATION SYSTEM
+
+### Library Stack
+```
+Framer Motion → Component animations, page transitions, spring physics, whileHover/whileTap
+GSAP          → Complex timelines, ScrollTrigger reveals, TextPlugin rotating text
+Lenis         → Buttery smooth virtual scroll (replaces native scroll)
+Tailwind CSS  → Shimmer, pulse, float, marquee (via keyframes in config)
+```
+
+### Global Animation Rules
+1. Every page component: wrap in `<motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ duration:0.6 }}>`.
+2. Scroll reveals: use `whileInView={{ opacity:1, y:0 }}` + `initial={{ opacity:0, y:40 }}` + `viewport={{ once:true }}`.
+3. Stagger grids: parent `variants` with `staggerChildren:0.08`, children `variants` with `hidden`/`visible`.
+4. Cards: `whileHover={{ y:-6, transition:{ type:'spring', stiffness:300, damping:30 } }}`.
+5. Buttons: `whileTap={{ scale:0.96 }}`.
+6. Exit: wrap unmounting elements in `<AnimatePresence>` with `exit` prop (always needs `key`).
+7. All GSAP: registered inside `useEffect`, cleaned up in return function.
+8. Lenis: instantiated in the root `SmoothScrollProvider` client component, synced to GSAP ScrollTrigger.
+
+### `src/hooks/useScrollAnimations.ts`
+```typescript
+'use client';
+import { useEffect } from 'react';
+import { gsap }         from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Lenis             from '@studio-freight/lenis';
+
+export function useScrollAnimations() {
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    });
+
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+
+    // Auto-reveal all elements marked data-animate="fade-up"
+    gsap.utils.toArray('[data-animate="fade-up"]').forEach((el) => {
+      gsap.fromTo(el, { opacity: 0, y: 50 }, {
+        opacity: 1, y: 0, duration: 0.9, ease: 'power3.out',
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+      });
+    });
+
+    return () => {
+      lenis.destroy();
+      ScrollTrigger.getAll().forEach(t => t.kill());
+      gsap.ticker.remove((time) => lenis.raf(time * 1000));
+    };
+  }, []);
+}
+```
+
+---
+
+## 🖥️ PRELOADER COMPONENT — `src/components/layout/Preloader.tsx`
+
+```typescript
+'use client';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+export default function Preloader() {
+  const [loading, setLoading]   = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setProgress(30),  300),
+      setTimeout(() => setProgress(60),  700),
+      setTimeout(() => setProgress(90),  1100),
+      setTimeout(() => {
+        setProgress(100);
+        setTimeout(() => setLoading(false), 400);
+      }, 1500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    
+      {loading && (
+        
+          {/* Animated SVG logo */}
+          
+            
+              
+              
+            
+            
+              HomeNest LK
+            
+            
+              Elevate Your Living Space
+            
+          
+
+          {/* Progress bar */}
+          
+            
+          
+          
+            {progress < 100 ? 'Loading…' : 'Welcome!'}
+          
+        
+      )}
+    
+  );
+}
+```
+
+---
+
+## 🖱️ CUSTOM CURSOR — `src/components/layout/CustomCursor.tsx`
+
+```typescript
+'use client';
+import { useEffect } from 'react';
+import { motion, useMotionValue, useSpring } from 'framer-motion';
+
+export default function CustomCursor() {
+  const x    = useMotionValue(-100);
+  const y    = useMotionValue(-100);
+  const size = useMotionValue(12);
+
+  const springX    = useSpring(x, { damping: 25, stiffness: 700 });
+  const springY    = useSpring(y, { damping: 25, stiffness: 700 });
+  const springSize = useSpring(size, { damping: 20, stiffness: 400 });
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => { x.set(e.clientX - 6); y.set(e.clientY - 6); };
+    const grow  = () => size.set(42);
+    const shrink = () => size.set(12);
+
+    window.addEventListener('mousemove', move);
+    const targets = document.querySelectorAll('a, button, [data-cursor-grow]');
+    targets.forEach(el => {
+      el.addEventListener('mouseenter', grow);
+      el.addEventListener('mouseleave', shrink);
+    });
+
+    return () => {
+      window.removeEventListener('mousemove', move);
+      targets.forEach(el => {
+        el.removeEventListener('mouseenter', grow);
+        el.removeEventListener('mouseleave', shrink);
+      });
+    };
+  }, []);
+
+  return (
+    
+  );
+}
+```
+
+---
+
+## 🏠 LANDING PAGE — WORLD-CLASS (10x Upgrade)
+
+### Design Identity
+- **Background:** Deep navy (`#0F172A`) for hero, cream (`#FAFAF7`) for content sections
+- **Primary Accent:** Emerald green (`#10B981`) with glow effects
+- **Secondary Accent:** Gold (`#F59E0B`) for premium badges and stars
+- **Typography:** Playfair Display for hero headlines, Plus Jakarta Sans for body
+- **Personality:** Elevated Sri Lankan home luxury brand
+
+### `src/components/home/HeroSection.tsx`
+
+Full implementation with:
+- Full-viewport dark section (`min-h-screen bg-navy`)
+- Animated gradient mesh background (2–3 `absolute` divs with `bg-brand-600/20`, `bg-gold-500/15`, `blur-[120px]`, `animate-pulse-slow`)
+- Subtle grid pattern overlay (`backgroundImage` CSS with `rgba(255,255,255,0.04)` lines)
+- GSAP `TextPlugin` cycling tagline words: **Beautiful / Elegant / Comfortable / Luxurious / Modern** (loop every 3s, type-on/erase effect)
+- 3 floating product images (Unsplash home decor photos) with independent `animate={{ y:[0,-15,0] }}` and `rotate` float loops, slight `perspective` tilt, frosted glass badge overlay
+- Floating "✨ New Collection" badge with `animate-glow`
+- Floating review card (`bg-white/10 backdrop-blur-md`)
+- Hero copy: eyebrow line (`"Sri Lanka's Premium Home Store"`), H1 headline, subtitle, two CTA buttons
+- Primary CTA: emerald button with shimmer sweep on hover (`::after` pseudo with translate-x transition), `whileHover={{ scale:1.03, boxShadow:'0 0 30px rgba(16,185,129,0.5)' }}`
+- Secondary CTA: ghost border button
+- Animated trust metrics row: `2,400+ Customers · 500+ Products · 4.9★ Rating`
+- Scroll indicator: mouse-icon SVG with bouncing dot inside
+- Parallax on scroll: `useScroll` + `useTransform` to shift floating images on Y axis
+
+### `src/components/home/TrustBar.tsx`
+
+- White section with border top and bottom
+- Desktop: 6-column grid — ShieldCheck / Truck / RotateCcw / Headphones / Star / Package icons + title + desc
+- Each card: hover → `bg-brand-50` transition
+- Mobile: infinite marquee (`motion.div` animating `x: 0 → -50%` repeat Infinity)
+- Scroll-triggered stagger reveal on desktop
+
+### `src/components/home/CategoryGrid.tsx`
+
+- Section header: eyebrow "Browse By Room", H2 "Shop By Category", subtitle
+- Fetch `categories` (isActive: true), orderBy displayOrder, limit 8
+- Use Unsplash images per category (Kitchen, Bedroom, Bathroom, Living Room, Storage, Cleaning, Garden, Office — map to matching Unsplash photo IDs)
+- 2×4 grid on desktop, 2×2 on mobile
+- Each card: **3D perspective tilt** via `onMouseMove` computing `rotateX`/`rotateY` from mouse offset, reset on `onMouseLeave`
+- Card: `aspect-square`, full-bleed image, gradient overlay, category name + emoji + "Shop collection →"
+- Hover: image scales to `scale(1.1)`, green tint overlay fades in
+- Stagger reveal: Framer Motion `whileInView` with `delay: index * 0.08`
+- Skeleton: animated `bg-slate-200 animate-pulse aspect-square rounded-3xl` while loading
+
+### `src/components/home/FeaturedProducts.tsx`
+
+- Section: "Featured Collection" heading
+- Query: `products` where `featured==true, isActive==true`, limit 8
+- Render `ProductCard` grid (2 col mobile, 4 col desktop)
+- "View All" link to `/catalog?filter=featured`
+- Stagger grid reveal
+
+### `src/components/home/BrandStory.tsx`
+
+- Split layout: left text, right image (Unsplash interior lifestyle shot)
+- Left: eyebrow → H2 "Crafting Homes, Building Stories" → 2-paragraph brand narrative → bullet list of values (Authentic · Local · Sustainable) → CTA button
+- Right: `next/image` with rounded-3xl, slight shadow, **parallax on scroll** (Framer Motion `useScroll` + `useTransform` `y: ['-10%', '10%']`)
+- Background: cream with subtle dot-grid pattern
+
+### `src/components/home/BestSellers.tsx`
+
+- **Horizontal scroll snap carousel**
+- Title: "Best Sellers" with a "🔥 This Week" badge
+- Query: products by `featured==true`, limit 12
+- `overflow-x-auto scroll-smooth snap-x snap-mandatory` on container
+- Each card: `snap-start flex-shrink-0 w-72`
+- Desktop: show prev/next arrow buttons with `whileHover` bounce
+- Arrow click: scroll container by `card-width * 3`
+- On mobile: swipe-native scroll
+
+### `src/components/home/StatsSection.tsx`
+
+- Full-width dark section with Unsplash interior background image (`opacity-10` overlay)
+- `bg-gradient-to-br from-navy via-navy/95 to-brand-900/50` overlay
+- 4-column stat grid: `2,400+ Customers | 500+ Products | 4.9★ Rating | 48h Delivery`
+- **Count-up animation**: `useInView` with `once:true` triggers a `setInterval` incrementing displayed number over 2 seconds
+- Large `font-display text-5xl md:text-6xl font-bold text-white` numbers
+
+### `src/components/home/Testimonials.tsx`
+
+- Heading: "What Our Customers Say" + average stars
+- Fetch `reviews` (isApproved:true), orderBy createdAt desc, limit 8
+- **Auto-scrolling testimonial carousel**: `motion.div` with `animate={{ x: [0, -(cardWidth * count)] }}` `transition={{ repeat:Infinity, ease:'linear', duration:30 }}`
+- Pause on `onMouseEnter`, resume on `onMouseLeave`
+- Each card: `bg-white rounded-3xl p-6 shadow-card w-80 flex-shrink-0` — stars, review text (max 150 chars), reviewer name, date, verified badge
+- Fallback to 3 hardcoded testimonials if Firestore has none yet
+
+### `src/components/home/PromoBanner.tsx`
+
+- Full-width emerald band (`bg-brand-600`)
+- Fetch `promotions` (isActive:true, expiresAt > now), limit 1
+- Title + description + live countdown timer (Days · Hours · Mins · Secs)
+- CTA button (white, outlined) linking to promotion.link
+- Slight gradient `from-brand-600 to-brand-700`
+- Fallback: "Free Shipping on orders over Rs. 5,000 island-wide!"
+
+### `src/components/home/Newsletter.tsx`
+
+- **Glassmorphism card** (`bg-white/80 backdrop-blur-xl border border-white/40 shadow-glass`) centered on a cream section
+- H2 "Stay in the Loop" + subtitle
+- Email input + "Subscribe" button (emerald)
+- On submit: check email not already in `newsletter` collection → save doc → show success state (animated checkmark, "You're subscribed! 🎉")
+- Framer Motion: card `whileInView` scale-in reveal
+
+### `src/app/page.tsx` — Home Page
+Compose all home sections in this order:
+1. `<HeroSection />`
+2. `<TrustBar />`
+3. `<CategoryGrid />`
+4. `<FeaturedProducts />`
+5. `<StatsSection />`
+6. `<BrandStory />`
+7. `<BestSellers />`
+8. `<Testimonials />`
+9. `<PromoBanner />`
+10. `<Newsletter />`
+
+---
+
+## 🧭 NAVBAR — `src/components/layout/Navbar.tsx`
+
+```typescript
+// Behavior:
+// - Initial: transparent background, white text (works over dark hero)
+// - After scrolling 60px: frosted glass: bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm
+// - Transition: 300ms ease with Framer Motion layoutId or CSS transition
+// - Sticky top-0 z-50
+
+// Desktop layout: [Logo] [Categories mega-menu] [Search] [Wishlist badge] [Cart badge] [Account]
+// Mobile: [Logo] [Search icon] [Cart badge] [Hamburger]
+
+// Categories mega-menu:
+// - Hover on "Collections" nav item → animated dropdown panel
+// - Panel: 4-column grid of categories (image + name) with Framer Motion height reveal
+// - useEffect to fetch categories once on mount
+
+// Search:
+// - Click search icon → full-width overlay expands with AnimatePresence
+// - Input autofocuses, debounced 300ms
+// - Filters productCache in-memory, shows instant results list below input
+// - Click outside or Escape to close
+
+// Cart badge: circle with cartCount from useStore
+// Wishlist badge: circle with wishlist.length from useStore
+// Account: if user logged in → avatar initials → dropdown (Account / Orders / Wishlist / Logout)
+//          if not logged in → "Sign In" button → opens Login Modal
+
+// Login / Register Modals (AnimatePresence, centered overlay with backdrop-blur)
+// Login: Email + Password + Google Sign-In + Forgot Password
+// Register: Name + Email + Password + Confirm Password
+// After register: create users/{uid} doc with role: "customer"
+//                 If email === STORE.adminEmail → set role: "admin"
+```
+
+---
+
+## 🛍️ PRODUCT CARD — `src/components/ecommerce/ProductCard.tsx`
+
+```typescript
+// Visual design:
+// - bg-white rounded-3xl overflow-hidden shadow-card hover:shadow-card-hover
+// - whileHover={{ y: -6 }} spring transition
+// - Aspect-square image area with bg-slate-50
+// - On hover: image crossfades to second image (AnimatePresence mode="wait")
+// - Badges: discount %, "Featured" (gold), "Only N left" (red) — top-left
+// - Wishlist heart button (top-right) — fills red when wishlisted
+// - Quick view eye button (top-right, below wishlist) — appears on group-hover
+// - Dot indicator for multiple images — bottom center, appears on hover
+// - Out-of-stock overlay: black/40 with "Out of Stock" pill
+
+// Info area:
+// - Brand/category (xs muted uppercase)
+// - Product name (sm font-semibold line-clamp-2)
+// - 5 gold stars + "(count)" review count
+// - Price: sale price (bold) + original (line-through muted)
+// - "Add to Cart" button → transitions to "✓ Added!" for 2s with brand-600 bg
+//   AnimatePresence mode="wait" on button text
+// - whileTap={{ scale: 0.96 }}
+```
+
+---
+
+## 📂 CATALOG PAGE — `src/app/catalog/page.tsx`
+
+### URL: `/catalog?category=Kitchen&sort=price_asc&min=500&max=5000&instock=true&page=1`
+
+### Data:
+- On first load: fetch ALL active products from Firestore (up to 200 docs), store in React state `productCache` + `localStorage` with timestamp
+- Cache expires after 5 minutes
+- All filtering and sorting done client-side on `productCache`
+
+### Layout:
+- Desktop: fixed left sidebar (280px) + right product grid
+- Mobile: top filter bar (collapsible drawer)
+
+### Filters (left sidebar):
+- Category: radio buttons from `categories` collection
+- Price range: dual `<input type="range">` sliders with real-time label update (Rs. 500 — Rs. 50,000)
+- In-stock toggle
+- Sort: dropdown (Featured / Price Low-High / Price High-Low / Newest / Name A-Z)
+
+### Product Grid:
+- View mode toggle: grid (2/3/4 col) or list view, saved to `localStorage`
+- 12 items per page, "Load More" button (appends next page to displayed items)
+- Framer Motion `AnimatePresence` with `layout` prop — items animate in/out when filters change
+- Results count: "Showing 12 of 48 products"
+- Sort/filter change → scroll to top of grid
+- Empty state: illustration + "No products found" + "Clear filters" button
+
+---
+
+## 🔍 PRODUCT DETAIL — `src/app/product/[id]/page.tsx`
+
+### Image Gallery — `src/components/ecommerce/ProductGallery.tsx`:
+- Primary: `aspect-square` large image
+- Thumbnail row: horizontal scroll, `aspect-square w-16` each
+- Click thumbnail → swap primary with Framer Motion `AnimatePresence` crossfade
+- Desktop hover on primary: **cursor-driven zoom** — `onMouseMove` computes offset → `transform: scale(1.8) translate(x, y)` on a cloned image element that follows the cursor within the image bounds
+- Mobile: swipe left/right between images (touch events)
+
+### Product Info:
+- Brand (xs muted) → H1 product name (large, font-display) → SKU (xs muted)
+- Star rating + "24 reviews" (clickable → scroll to reviews section)
+- Price block: sale price (2xl, brand-600, font-bold) + original (line-through, slate-400) + "-N% OFF" badge
+- Stock badge: green "In Stock" / amber "Only N left" / red "Out of Stock"
+- Variants: color swatches (colored circles, `border-2 border-navy` when selected) + size pills
+- Quantity stepper: `[−]` button + number + `[+]` button (whileTap scale, min=1, max=stock)
+- "Add to Cart" primary button (full width, emerald) + "Add to Wishlist" outline button
+- Trust badges row: `🚚 Free Shipping over Rs.5,000 · ✅ Genuine Products · 🔄 Easy Returns`
+- Animated tab bar: Description | Specifications | Reviews — active tab with `motion.div` underline (layoutId="tab-underline")
+
+### Reviews — `src/components/ecommerce/ProductReviews.tsx`:
+- Fetch `reviews` (productId==id, isApproved==true), orderBy createdAt desc, limit 10
+- Rating summary: average + distribution bars (1★–5★)
+- Review cards with star rating, name (first name + last initial), date, review text
+- "Write a Review" (logged-in + verified purchase only): star selector (clickable, animate on hover) + textarea + submit
+- Submit → add to `reviews` collection + toast "Review submitted for approval"
+
+### Related Products:
+- Query products (same category, != current id), limit 4
+- `ProductCard` horizontal row
+
+---
+
+## 🛒 CART — `src/app/cart/page.tsx`
+
+### Cart State Architecture:
+```
+Priority merge order:
+  1. Zustand store (in-memory, always current)
+  2. localStorage (via Zustand persist middleware)
+  3. Firestore users/{uid}/cart (logged-in, cross-device)
+
+On login: merge localStorage cart with Firestore cart
+  → Firestore items WIN on quantity conflict
+  → Prompt user if conflict: "You have N items from a previous session. Keep them?"
+
+On logout: keep local cart (guest browsing)
+
+Sync hook (src/hooks/useCart.ts):
+  useEffect on user change → fetch Firestore cart → merge → save merged to both
+  useEffect on cart change + user logged in → debounced write to Firestore (300ms)
+```
+
+### Cart Drawer — `src/components/ecommerce/CartDrawer.tsx`:
+- `AnimatePresence` → `motion.div` slides in from right (`x: '100%' → 0`) with backdrop
+- Header: "Your Cart (N items)" + X close
+- Item rows: thumbnail + name + variant + price + qty stepper (whileTap) + X remove
+- Footer sticky: subtotal + "View Full Cart" + "Checkout →"
+- Empty state: shopping bag illustration + "Your cart is empty" + "Continue Shopping"
+- Backdrop click → close drawer
+
+### Full Cart Page:
+- Item list (same as drawer but full-width, with larger thumbnails)
+- Coupon input: validate against Firestore `coupons` collection
+  - Valid: show green ✓ + "Discount applied: Rs. N off"
+  - Invalid/expired: red toast
+- Order Summary (sticky right panel on desktop):
+  - Subtotal, Shipping fee (free if ≥ Rs. 5,000), Discount (coupon), **Total** (bold, large)
+  - "Proceed to Checkout →" button
+
+---
+
+## 💳 CHECKOUT — `src/app/checkout/page.tsx`
+
+### Step indicator: 3 steps with animated progress bar (Framer Motion width transition)
+
+### Step 1 — Customer Info
+- react-hook-form + Zod schema
+- Fields: Full Name (min 2), Email (email format), Phone (Sri Lanka format regex)
+- Pre-fill from `users/{uid}` if logged in
+- "Continue →" validates → animates to Step 2
+
+### Step 2 — Delivery Address
+- Fields: Line 1 (required), Line 2 (optional), City, District (dropdown — 25 SL districts), Postal Code, Country (default Sri Lanka)
+- If logged in + saved addresses: "Use saved address" dropdown populates fields
+- "Save this address" checkbox → on order complete, add to `users/{uid}/addresses`
+- Delivery method radio:
+  - Standard (3–5 days) Rs. 350
+  - Express (1–2 days) Rs. 650
+  - Free Delivery (shown only if subtotal ≥ Rs. 5,000)
+- "Continue →" validates → Step 3
+
+### Step 3 — Payment & Confirm
+- Left: order summary (items, subtotal, shipping, discount, total)
+- Right: payment method
+  - 🔵 PayHere (Credit/Debit Card, Online Banking, Mobile Banking) — RECOMMENDED
+  - 🏦 Bank Transfer
+  - 💵 Cash on Delivery
+- "Place Order" button → creates Firestore order → routes to payment handler
+
+---
+
+## 🔒 PAYHERE INTEGRATION (Secure — Next.js API Routes)
+
+### `src/app/api/payhere/hash/route.ts`
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { orderId, amount, currency } = await request.json();
+    if (!orderId || !amount || !currency)
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+
+    const merchantId     = process.env.PAYHERE_MERCHANT_ID!;
+    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET!;
+
+    const secretHash = crypto.createHash('md5').update(merchantSecret).digest('hex').toUpperCase();
+    const hashInput  = `${merchantId}${orderId}${parseFloat(String(amount)).toFixed(2)}${currency}${secretHash}`;
+    const hash       = crypto.createHash('md5').update(hashInput).digest('hex').toUpperCase();
+
+    return NextResponse.json({ hash, merchantId });
+  } catch (err) {
+    console.error('PayHere hash error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+### `src/app/api/payhere/notify/route.ts`
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
+import { adminDb } from '@/lib/firebaseAdmin';
+import { FieldValue } from 'firebase-admin/firestore';
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.formData();
+    const fields = Object.fromEntries(data) as Record;
+    const { merchant_id, order_id, payhere_amount, payhere_currency, status_code, md5sig } = fields;
+
+    // Verify PayHere signature
+    const merchantSecret = process.env.PAYHERE_MERCHANT_SECRET!;
+    const secretHash = crypto.createHash('md5').update(merchantSecret).digest('hex').toUpperCase();
+    const localSig = crypto.createHash('md5')
+      .update(`${merchant_id}${order_id}${payhere_amount}${payhere_currency}${status_code}${secretHash}`)
+      .digest('hex').toUpperCase();
+
+    if (localSig !== md5sig) {
+      console.error('PayHere signature mismatch');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    const statusMap: Record = { '2':'paid', '-1':'cancelled', '-2':'failed', '-3':'chargebacked' };
+    const newStatus = statusMap[status_code] || 'unknown';
+
+    await adminDb.collection('orders').doc(order_id).update({
+      status: newStatus, paymentStatus: newStatus,
+      payhereStatus: status_code, updatedAt: new Date(),
+    });
+
+    if (status_code === '2') {
+      const orderDoc = await adminDb.collection('orders').doc(order_id).get();
+      const items = orderDoc.data()?.items || [];
+      const batch = adminDb.batch();
+      for (const item of items) {
+        batch.update(adminDb.collection('products').doc(item.productId), {
+          stock: FieldValue.increment(-item.quantity),
+        });
+      }
+      await batch.commit();
+    }
+
+    return new NextResponse('OK', { status: 200 });
+  } catch (err) {
+    console.error('PayHere notify error:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+```
+
+### Client-side PayHere call (in CheckoutForm.tsx):
+```typescript
+// ✅ MANDATORY: check res.ok BEFORE calling .json()
+async function initiatePayHere(orderId: string, total: number, customer: CustomerInfo) {
+  const res = await fetch('/api/payhere/hash', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId, amount: total, currency: 'LKR' }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text(); // Might be HTML from Next.js error page
+    console.error('PayHere hash API error:', errorText.substring(0, 300));
+    addToast({ message: 'Payment setup failed. Please try again.', type: 'error' });
+    return;
+  }
+
+  const { hash, merchantId } = await res.json();
+
+  // Load PayHere SDK dynamically
+  if (!window.payhere) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://www.payhere.lk/lib/payhere.js';
+      script.onload = () => resolve();
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  const isSandbox = process.env.NEXT_PUBLIC_PAYHERE_SANDBOX === 'true';
+
+  window.payhere.onCompleted = (completedOrderId: string) => {
+    router.push(`/order/${completedOrderId}`);
+    clearCart();
+    addToast({ message: 'Payment successful! Order confirmed. 🎉', type: 'success' });
+  };
+  window.payhere.onDismissed = async () => {
+    await updateDoc(doc(db, 'orders', orderId), { status: 'cancelled' });
+    addToast({ message: 'Payment was cancelled.', type: 'warning' });
+  };
+  window.payhere.onError = (error: string) => {
+    console.error('PayHere error:', error);
+    addToast({ message: 'Payment failed. Please try again.', type: 'error' });
+  };
+
+  window.payhere.startPayment({
+    sandbox:    isSandbox,
+    merchant_id: merchantId,
+    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/order/${orderId}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout`,
+    notify_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payhere/notify`,
+    order_id:   orderId,
+    items:      cart.map(i => i.productName).join(', '),
+    amount:     total.toFixed(2),
+    currency:   'LKR',
+    hash,
+    first_name: customer.firstName, last_name: customer.lastName,
+    email: customer.email, phone: customer.phone,
+    address: customer.shippingAddress.line1, city: customer.shippingAddress.city,
+    country: 'Sri Lanka',
+  });
+}
+```
+
+---
+
+## 👤 USER ACCOUNT — `src/app/account/page.tsx`
+
+### Auth check: redirect to `/` if not logged in (via `onAuthStateChanged`)
+
+### Tabs: Profile | Saved Addresses | Order History | Wishlist
+
+### Profile Tab:
+- Display name, email, phone, profile photo
+- Edit button → inline form (react-hook-form)
+- Profile photo: click → file input → `compressImage` → upload to `users/{uid}/profile.jpg` in Firebase Storage → `updateProfile(auth.currentUser, { photoURL })` + `updateDoc(users/{uid}, { photoURL })`
+
+### Addresses Tab:
+- List from `users/{uid}/addresses` subcollection (up to 5)
+- Each: address card with label, full address, "Default" badge
+- Add / Edit (modal form) / Delete (confirm dialog) / Set Default actions
+
+### Order History Tab:
+- Fetch `orders` where `userId==uid`, orderBy `createdAt` desc
+- Each row: Order #ID, date, items count, total, status badge (color-coded)
+- Status colors: processing=amber, shipped=blue, delivered=green, cancelled=red
+- Click → expand inline: itemized list + delivery address + tracking number
+
+### Wishlist Tab:
+- Items from Zustand `wishlist` array + Firestore `users/{uid}/wishlist`
+- Render as `ProductCard` grid
+- Remove from wishlist button on each card
+
+---
+
+## 🗂️ ADMIN PANEL — `src/app/admin/`
+
+### `src/components/admin/AdminGuard.tsx`
+```typescript
+'use client';
+// Wraps all admin pages. Checks:
+// 1. Firebase Auth user exists (redirect to / if not)
+// 2. Firestore users/{uid}.role === 'admin' or 'manager' (redirect to / if not)
+// Shows spinner while checking.
+// Stores role in Zustand for permission checks throughout admin.
+```
+
+### Admin Layout (`src/app/admin/layout.tsx`):
+- Fixed sidebar (240px wide) with logo + nav links + user info + logout
+- Sidebar links: Dashboard / Products / Orders / Customers / Marketing / Settings
+- Divider → "Back to Store" (link to /) + "Logout" button
+- Main content: `flex-1 overflow-auto bg-slate-50`
+- Mobile: hamburger → slide-in sidebar overlay
+- Active route: `bg-brand-50 text-brand-700 font-semibold` link style
+
+---
+
+### Dashboard — `src/app/admin/page.tsx`
+
+**KPI Cards (recharts `PieChart` for quick visual, or just numbers):**
+- Total Revenue (last 30 days)
+- Orders Today
+- Total Products
+- Total Customers
+
+**Revenue Chart (`src/components/admin/RevenueChart.tsx`):**
+```typescript
+// recharts AreaChart:
+// - defs gradient: brand-600 (30% opacity top → 0% bottom)
+// - XAxis: date labels (shortened: "Jun 13")
+// - YAxis: "Rs.Xk" format
+// - Tooltip: dark navy bg (#0f172a), white text
+// - strokeWidth: 2.5, brand-600 stroke
+// - isAnimationActive: true (recharts default, nice entry animation)
+```
+
+**Recent Orders Table:** last 10 orders — ID, Customer, Items, Total, Status badge, Date
+**Low Stock Alerts:** products where `stock < 10` — warning list with restock link
+
+---
+
+### Product Management — `src/app/admin/products/`
+
+**Product List (`/admin/products/page.tsx`):**
+- Table: Checkbox | Thumbnail | Name | SKU | Category | Price | Stock | Status | Actions
+- Bulk actions: Delete selected | Set Active | Set Inactive (appears when items checked)
+- Row actions: Edit → `/admin/products/[id]` | Delete → confirmation modal → delete Storage files + Firestore doc
+- Inline search/filter: by name, category, stock status (client-side)
+- Pagination: 20 per page
+
+**Product Form (`src/components/admin/ProductForm.tsx`)** — used by both Add and Edit pages:
+```
+BASIC INFO:
+  Product Name*  : text input
+  SKU            : text + "Auto-Generate" button → "HN-" + Date.now().toString(36).toUpperCase()
+  Category*      : select (from categories)
+  Brand          : text
+  Tags           : text (comma-sep → stored as string[])
+
+SHORT DESCRIPTION: textarea (maxLength 200, live char counter)
+DESCRIPTION: large textarea (newlines preserved, rendered as <br> on storefront)
+
+PRICING:
+  Cost Price     : number (Rs.)
+  Selling Price* : number (Rs.)
+  Discount Price : number (Rs., 0 = no discount)
+  Live Preview   : "Customer sees Rs. X, saves Rs. Y (Z%)" — updates on input
+
+INVENTORY:
+  Stock Qty*     : number
+  Weight         : number (grams)
+  Dimensions     : 3 numbers (L × W × H in cm)
+
+VARIANTS (dynamic):
+  "Add Variant Group" button
+  Each group: Type dropdown (Color/Size/Material) + Values (comma-sep)
+  Stored as: variants: [{ type: "Color", values: ["Red","Blue"] }]
+
+FLAGS:
+  Featured: toggle switch (custom Tailwind toggle component)
+  Active:   toggle switch
+
+IMAGES: ImageUploader component (see below)
+
+[Save Product] button: validate → addDoc or updateDoc → success toast → redirect to /admin/products
+```
+
+**Image Uploader (`src/components/admin/ImageUploader.tsx`):**
+```typescript
+// Drag-and-drop zone (ondragover / ondrop events)
+// onClick: trigger hidden 
+// Validation: JPEG/PNG/WebP only, max 5MB each, max 8 images total
+// HEIC rejection with helpful toast
+
+// Compression (via Canvas API):
+async function compressImage(file: File, maxDimension: number, quality: number): Promise {
+  // Create Image element, load via URL.createObjectURL
+  // Draw to canvas (clamped to maxDimension)
+  // canvas.toBlob → jpeg, given quality
+  // Return Blob
+}
+// Main: 1200px, 0.82 quality
+// Thumbnail: 300px, 0.80 quality
+
+// Upload:
+// ref(storage, `products/${productId}/${timestamp}.jpg`)
+// uploadBytesResumable → per-image progress bar (thin bar below image thumbnail)
+// On complete: getDownloadURL → update parent component via onChange(urls[])
+
+// Preview grid: 4-col, aspect-square, rounded-xl
+// First image: "Cover" badge (brand-600)
+// Remove button: X (top-right, visible on hover)
+// Reorder: drag handles (optional but nice)
+```
+
+---
+
+### Order Management — `src/app/admin/orders/`
+
+**Order List:**
+- Tabs: All | Pending | Processing | Shipped | Delivered | Cancelled
+- Tab counts fetched from same Firestore query, filtered client-side
+- Columns: Order ID | Customer | Date | Items | Total | Payment | Status badge | Actions
+- Search by order ID or customer name (client-side filter)
+- Row click → Order Detail page
+
+**Order Detail:**
+- Status timeline (step indicators): Placed → Processing → Shipped → Delivered
+- Status update dropdown + "Update" button → updates `orders/{id}.status + updatedAt`
+- Tracking number input field (shown when status = Shipped)
+- Items table: image, name, qty, unit price, line total
+- Customer info block: name, email, phone
+- Delivery address block
+- Payment summary: subtotal + shipping + discount + total
+- Print Invoice: `window.print()` with print CSS (hides sidebar, shows only invoice content)
+
+---
+
+### Customer Management — `src/app/admin/customers/`
+
+- Table: Avatar (initials circle) | Name | Email | Phone | Orders | Total Spent | Joined | Status
+- Fetch `users` where `role == "customer"`, orderBy `createdAt` desc
+- Click row → Customer Profile modal:
+  - User info + order history table
+  - Total spend, avg order value
+  - Ban/Unban toggle → sets `users/{uid}.banned: true/false`
+  - Banned users: `onAuthStateChanged` checks `users/{uid}.banned` → show "Account suspended" if true
+
+---
+
+### Marketing — `src/app/admin/marketing/`
+
+**Coupons section:**
+- Table: Code | Type | Value | Min Order | Used/Max | Expires | Active | Actions
+- Add/Edit form: Code (auto-uppercase), Type (% or Rs.), Value, Min Order, Max Uses, Expires At, Active toggle
+- Delete with confirmation
+
+**Banners section:**
+- Grid list of banners with preview thumbnails
+- Add/Edit: Title, Subtitle, CTA Text, CTA Link, Image (single, 1920×600 ideal), Display Order, Active
+- Drag to reorder (HTML5 drag API → update `displayOrder` on drop for all affected docs in a batch)
+
+---
+
+### Settings — `src/app/admin/settings/`
+
+- Tab: Store Info → edit name, tagline, email, phone, address → save to `settings/store`
+- Tab: Delivery → standard fee, express fee, free threshold, per-district overrides table → save to `settings/delivery`
+- Tab: Payment Methods → toggles (PayHere / Bank Transfer / COD) + bank account details form → save to `settings/payments`
+- Tab: Categories → add/edit/delete → fields: name, icon (emoji), displayOrder, active → "Update all products?" prompt on name change
+
+---
+
+## 🛠️ UTILITIES — `src/lib/utils.ts`
+
+```typescript
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
+
+export function formatCurrency(amount: number): string {
+  return amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function generateOrderId(): string {
+  return 'HN' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+}
+
+export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number) {
+  let t: ReturnType;
+  return (...args: Parameters) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+export function formatDate(timestamp: { seconds: number }): string {
+  return new Date(timestamp.seconds * 1000).toLocaleDateString('en-LK', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
+export function isValidSLPhone(phone: string): boolean {
+  return /^(?:\+94|0)(?:7[01245678])\d{7}$/.test(phone.replace(/[\s-]/g, ''));
+}
+
+// ✅ MANDATORY safe fetch — prevents "Unexpected token '(url: string, options?: RequestInit): Promise {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`[${res.status}] ${res.statusText}: ${text.substring(0, 200)}`);
+  }
+  return res.json() as Promise;
+}
+```
+
+---
+
+## 🌐 ROOT LAYOUT — `src/app/layout.tsx`
+
+```typescript
+import { Plus_Jakarta_Sans, Cormorant_Garamond, Playfair_Display } from 'next/font/google';
+
+// Load all 3 fonts, assign CSS variables:
+//   --font-plus-jakarta, --font-cormorant, --font-playfair
+
+// Layout structure:
+// 
+//   
+//              ← client-side context providers
+//            ← brand animation, hides after 1.5s
+//         ← spring cursor (desktop only)
+//               ← sticky, transparent → frosted glass
+//       {children}
+//               ← dark navy, links + newsletter mini-form
+//           ← slide-in from right (AnimatePresence)
+//        ← bottom-right toast stack
+//     
+//   
+// 
+
+// Metadata: title template "%s | HomeNest LK", description, OpenGraph, keywords
+```
+
+### `src/app/providers.tsx`
+```typescript
+'use client';
+// Wrap children in:
+// - React Query Provider (if used)
+// - Auth listener: onAuthStateChanged → setUser in Zustand
+// - Lenis smooth scroll initializer (useScrollAnimations hook)
+// - ThemeProvider (next-themes, defaultTheme: "light")
+```
+
+---
+
+## 🗄️ FIRESTORE SCHEMA
+
+```
+/products/{productId}
+  productName, sku, category, brand, shortDescription, description
+  costPrice, sellingPrice, discountPrice (0 = no discount), stock, weight
+  dimensions: { length, width, height }
+  variants: [{ type, values: string[] }]
+  tags: string[], featured: boolean, isActive: boolean
+  images: string[], thumbnails: string[]
+  createdAt, updatedAt: Timestamp
+
+/orders/{orderId}
+  userId, customer: { firstName, lastName, email, phone }
+  items: [{ productId, productName, image, price, quantity, variant }]
+  subtotal, shippingFee, discount, total
+  couponCode: string|null, paymentMethod, paymentStatus
+  status, shippingAddress: { line1, line2, city, district, postalCode, country }
+  deliveryType, trackingNumber: string|null
+  createdAt, updatedAt: Timestamp
+
+/users/{uid}
+  displayName, email, phone, role, photoURL, banned: boolean, createdAt
+  /addresses/{id}: { label, line1, line2, city, district, postalCode, country, isDefault }
+  /wishlist/{productId}: { productId, addedAt }
+  /cart (single doc): { items: CartItem[], updatedAt }
+
+/categories/{id}   : { name, icon, imageURL, displayOrder, isActive }
+/coupons/{code}    : { type, value, minOrderValue, maxUses, usedCount, expiresAt, isActive }
+/reviews/{id}      : { productId, userId, displayName, rating, text, isApproved, createdAt }
+/banners/{id}      : { title, subtitle, ctaText, ctaLink, imageURL, displayOrder, isActive }
+/promotions/{id}   : { title, subtitle, ctaText, ctaLink, discount, code, expiresAt, isActive }
+/newsletter/{id}   : { email, subscribedAt }
+/settings/store    : { name, tagline, email, phone, address }
+/settings/delivery : { freeShippingThreshold, standardFee, expressFee, districtOverrides: {} }
+/settings/payments : { payhere, bankTransfer, cod, bankDetails: { bankName, accountName, accountNumber, branch } }
+```
+
+---
+
+## 📋 FIRESTORE INDEXES — `firestore.indexes.json`
+
+```json
+{
+  "indexes": [
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive",  "order": "ASCENDING" },
+        { "fieldPath": "featured",  "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isActive",  "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "reviews",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "productId",  "order": "ASCENDING" },
+        { "fieldPath": "isApproved", "order": "ASCENDING" },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
+```
+
+---
+
+## 📋 FIRESTORE RULES — `firestore.rules`
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed()  { return request.auth != null; }
+    function getRole()   { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function isAdmin()   { return isAuthed() && getRole() == 'admin'; }
+    function isManager() { return isAuthed() && (getRole() == 'admin' || getRole() == 'manager'); }
+    function isOwner(uid){ return isAuthed() && request.auth.uid == uid; }
+    function notBanned() { return !get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false); }
+
+    match /products/{id} {
+      allow read: if resource.data.isActive == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+    match /orders/{id} {
+      allow create: if isAuthed() && notBanned();
+      allow read:   if isOwner(resource.data.userId) || isManager();
+      allow update: if isManager();
+      allow delete: if isAdmin();
+    }
+    match /users/{uid} {
+      allow read:   if isOwner(uid) || isManager();
+      allow update: if isOwner(uid) || isAdmin();
+      allow create: if isAuthed() && request.auth.uid == uid;
+      allow delete: if isAdmin();
+      allow list:   if isManager();
+      match /addresses/{addrId} { allow read, write: if isOwner(uid); }
+      match /wishlist/{prodId}  { allow read, write: if isOwner(uid); }
+      match /cart/{any}         { allow read, write: if isOwner(uid); }
+    }
+    match /categories/{id}  { allow read: if true;       allow write: if isAdmin(); }
+    match /banners/{id}     { allow read: if true;       allow write: if isAdmin(); }
+    match /promotions/{id}  { allow read: if true;       allow write: if isAdmin(); }
+    match /settings/{id}    { allow read: if true;       allow write: if isAdmin(); }
+    match /coupons/{code}   { allow read: if isAuthed(); allow write: if isAdmin(); }
+    match /reviews/{id} {
+      allow read:   if resource.data.isApproved == true || isAdmin();
+      allow create: if isAuthed() && notBanned() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    match /newsletter/{id}  { allow create: if true; allow read, write: if isAdmin(); }
+    match /mail/{id}        { allow read, write: if false; }
+  }
+}
+```
+
+---
+
+## 📋 STORAGE RULES — `storage.rules`
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        && request.resource.size < 6 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+    match /banners/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        && request.resource.size < 6 * 1024 * 1024;
+    }
+    match /users/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth.uid == uid
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+```
+
+---
+
+## 🌱 SEED DATA FUNCTION
+
+Include a `seedDatabase()` function (guarded by `process.env.NODE_ENV === 'development'`) callable from browser console:
+
+**Categories (6):**
+
+|
+ Category     
+|
+ Icon 
+|
+ Unsplash Image 
+|
+|
+-------------
+|
+------
+|
+----------------
+|
+|
+ Kitchen      
+|
+ 🍳   
+|
+`photo-1556909114-f6e7ad7d3136`
+|
+|
+ Bedroom      
+|
+ 🛏️   
+|
+`photo-1586105251261-72a756497a11`
+|
+|
+ Bathroom     
+|
+ 🚿   
+|
+`photo-1552321554-5fefe8c9ef14`
+|
+|
+ Living Room  
+|
+ 🛋️   
+|
+`photo-1555041469-a586c61ea9bc`
+|
+|
+ Storage      
+|
+ 📦   
+|
+`photo-1558618666-fcd25c85cd64`
+|
+|
+ Cleaning     
+|
+ 🧹   
+|
+`photo-1563453392212-326f5e854473`
+|
+
+**Products (12 sample):** Rice cooker (Rs. 5,500), Bedsheet Set (Rs. 3,200), Premium Towel Set (Rs. 1,850), Sofa Throw Blanket (Rs. 2,100), Bamboo Storage Basket (Rs. 950), Ceramic Dinner Set (Rs. 7,800), LED Desk Lamp (Rs. 4,400), Plant Stand (Rs. 1,200), Knife Set (Rs. 6,500), Blackout Curtains (Rs. 8,900), Essential Oil Diffuser (Rs. 3,600), Laundry Organizer (Rs. 1,450)
+
+All product images: relevant Unsplash photos at `?w=800&q=80`
+
+---
+
+## 🌐 DEPLOYMENT GUIDE
+
+```
+PREREQUISITES:
+  - Node.js 20+
+  - npm install
+  - Firebase project at console.firebase.google.com
+  - Enable: Firestore, Storage, Auth (Email/Password + Google), Hosting (optional)
+
+STEP 1 — Local development:
+  cp .env.example .env.local
+  # Fill in all values in .env.local
+  npm run dev → http://localhost:3000
+
+STEP 2 — Deploy Firebase rules & indexes:
+  npm install -g firebase-tools
+  firebase login
+  firebase use --add   (select project)
+  firebase deploy --only firestore:rules,firestore:indexes,storage:rules
+
+STEP 3 — Deploy to Vercel:
+  npx vercel login
+  npx vercel
+  # OR: import GitHub repo at vercel.com → Framework: Next.js (auto-detected)
+
+STEP 4 — Set environment variables on Vercel:
+  Vercel Dashboard → Project → Settings → Environment Variables
+  Add all variables from .env.example with real values
+  NEVER put PAYHERE_MERCHANT_SECRET or FIREBASE_ADMIN_PRIVATE_KEY in a NEXT_PUBLIC_ var
+
+STEP 5 — First admin account:
+  Register in-app with email === NEXT_PUBLIC_ADMIN_EMAIL value
+  App auto-sets role:"admin" on first registration for this email
+  Navigate to /admin to access dashboard
+
+STEP 6 — Seed sample data:
+  Open browser console on localhost:3000
+  Run: seedDatabase()
+  Adds categories + sample products + banners
+```
+
+---
+
+## ✅ SECTION 14 — AI AGENT: MANDATORY TROUBLESHOOTING PROTOCOL
+
+**YOU MUST COMPLETE ALL 12 STEPS BELOW BEFORE PRESENTING ANY FILES. NO EXCEPTIONS.**
+
+---
+
+### STEP 1 — TypeScript Strict Check
+```bash
+npx tsc --noEmit
+```
+**Fix every error. Common issues:**
+- Missing `'use client'` on components using hooks
+- Firebase DocumentData not typed → use `as Product` cast after `doc.data()`
+- Framer Motion `motion.div` variant prop types
+- Missing `key` props in mapped JSX
+- `window.payhere` not recognized → verify `src/types/payhere.d.ts` exists
+
+---
+
+### STEP 2 — ESLint Zero Warnings
+```bash
+npx eslint src --ext .ts,.tsx --max-warnings 0
+```
+**Fix:** unused imports, missing useEffect deps (add `// eslint-disable-next-line` with comment if intentional), unsafe `any` usage.
+
+---
+
+### STEP 3 — Build Must Succeed
+```bash
+npm run build
+```
+**Common build failures and fixes:**
+- `"'X' is not a module"` → check `next.config.ts` `optimizePackageImports` array
+- `"window is not defined"` → component needs `'use client'` or `typeof window !== 'undefined'` guard
+- `"Cannot use import statement outside a module"` → firebase-admin must only be imported in API routes (server-side)
+- `"next/image: Required"` → all `<Image>` need `width+height` or `fill` prop
+- GSAP `ScrollTrigger.register()` in `useEffect` → no SSR issue; if still failing, dynamic import GSAP
+
+---
+
+### STEP 4 — Environment Variable Audit
+```
+SCAN EVERY FILE for these violations:
+❌ process.env.PAYHERE_MERCHANT_SECRET in any /src/app/ file NOT in /src/app/api/
+❌ process.env.FIREBASE_ADMIN_PRIVATE_KEY in any client component
+❌ process.env.FIREBASE_ADMIN_CLIENT_EMAIL in any client component
+❌ Hardcoded merchant IDs, API keys, or any secret string
+❌ Any env var without NEXT_PUBLIC_ prefix referenced in a 'use client' file
+
+✅ CORRECT: NEXT_PUBLIC_* vars in client components
+✅ CORRECT: Non-NEXT_PUBLIC_ secrets ONLY in /src/app/api/ route files and /src/lib/firebaseAdmin.ts
+```
+
+---
+
+### STEP 5 — API Route Simulation Check
+
+Mentally trace each scenario and verify the code handles it:
+
+|
+ Route 
+|
+ Input 
+|
+ Expected Output 
+|
+|
+-------
+|
+-------
+|
+----------------
+|
+|
+`POST /api/payhere/hash`
+|
+ Missing 
+`orderId`
+|
+ 400 JSON 
+`{ error: "Missing required fields" }`
+|
+|
+`POST /api/payhere/hash`
+|
+ Valid body 
+|
+ 200 JSON 
+`{ hash: "ABC123...", merchantId: "..." }`
+|
+|
+`POST /api/payhere/notify`
+|
+ Wrong 
+`md5sig`
+|
+ 400 JSON 
+`{ error: "Invalid signature" }`
+|
+|
+`POST /api/payhere/notify`
+|
+`status_code: "2"`
+|
+ Updates order to 
+`paid`
+, deducts stock via batch 
+|
+|
+`POST /api/payhere/notify`
+|
+`status_code: "-1"`
+|
+ Updates order to 
+`cancelled`
+|
+|
+ Any route 
+|
+ Server throws 
+|
+ 500 JSON 
+`{ error: "Internal server error" }`
+|
+
+---
+
+### STEP 6 — res.ok Safety Audit (Critical — Prevents "Unexpected token '<'" Bug)
+```
+Search for ALL .json() calls in client code:
+grep -rn "\.json()" src --include="*.tsx" --include="*.ts" | grep -v "api/" | grep -v "lib/"
+```
+**Every single result MUST have a `res.ok` check immediately before it.** Fix any that don't:
+```typescript
+// ❌ WRONG — crashes with "Unexpected token '<'" when API returns HTML error page
+const data = await fetch('/api/something').then(r => r.json());
+
+// ✅ CORRECT
+const res = await fetch('/api/something');
+if (!res.ok) {
+  const errorText = await res.text();
+  console.error('API error:', errorText.substring(0, 200));
+  addToast({ message: 'Something went wrong. Please try again.', type: 'error' });
+  return;
+}
+const data = await res.json();
+```
+
+---
+
+### STEP 7 — Firestore Composite Index Verification
+
+Every Firestore query using `where()` + `orderBy()` on different fields needs a composite index. Verify all present in `firestore.indexes.json`:
+
+|
+ Query 
+|
+ Needs Index? 
+|
+|
+-------
+|
+-------------
+|
+|
+`products`
+ where 
+`isActive + featured`
+ orderBy 
+`createdAt`
+|
+ ✅ Required 
+|
+|
+`products`
+ where 
+`isActive`
+ orderBy 
+`createdAt`
+|
+ ✅ Required 
+|
+|
+`orders`
+ where 
+`userId`
+ orderBy 
+`createdAt`
+|
+ ✅ Required 
+|
+|
+`orders`
+ where 
+`status`
+ orderBy 
+`createdAt`
+|
+ ✅ Required 
+|
+|
+`reviews`
+ where 
+`productId + isApproved`
+ orderBy 
+`createdAt`
+|
+ ✅ Required 
+|
+
+If any new queries were added during implementation, add them to `firestore.indexes.json`.
+
+---
+
+### STEP 8 — Animation Library Checks
+
+Verify:
+- [ ] Every `<AnimatePresence>` child has a `key` prop
+- [ ] Every GSAP animation is cleaned up: `return () => { tl.kill(); ScrollTrigger.getAll().forEach(t => t.kill()); }`
+- [ ] Lenis is destroyed on unmount: `return () => { lenis.destroy(); }`
+- [ ] No GSAP/Framer Motion imports in Server Components (files without `'use client'`)
+- [ ] `gsap.registerPlugin(ScrollTrigger, TextPlugin)` is called inside `useEffect`, not at module level
+- [ ] Lenis doesn't conflict with native scroll on touch devices (Lenis `syncToNative: true` for iOS)
+- [ ] Custom cursor div has `hidden md:block` (invisible on touch devices, doesn't interfere)
+
+---
+
+### STEP 9 — Image Optimization Audit
+
+- [ ] All `<img>` tags in **storefront** components replaced with `next/image <Image />` where src is a known remote domain
+- [ ] All `next/image` components have either `width + height` OR `fill` (with `relative` parent container)
+- [ ] `next.config.ts` `remotePatterns` includes: `firebasestorage.googleapis.com`, `images.unsplash.com`, `lh3.googleusercontent.com`
+- [ ] All Unsplash URLs include `?w=800&q=80` (or appropriate width) to avoid loading full-res images
+- [ ] Product thumbnails use smaller URLs: `?w=400&q=80`
+- [ ] Hero background images use: `?w=1400&q=70`
+
+---
+
+### STEP 10 — Security Checklist
+
+- [ ] `PAYHERE_MERCHANT_SECRET` appears ONLY in `/src/app/api/payhere/hash/route.ts` and `/src/app/api/payhere/notify/route.ts`
+- [ ] PayHere notify handler verifies MD5 signature BEFORE reading order data or updating Firestore
+- [ ] All admin pages wrapped in `<AdminGuard />` checking Firestore role, not just Firebase Auth
+- [ ] Firestore rules: non-admin users cannot read `isActive: false` products
+- [ ] Cart quantity capped at `Math.min(newQty, item.stock)` — cannot exceed stock level
+- [ ] Review submission requires `isAuthed() && notBanned()` per Firestore rules
+- [ ] User banning: `users/{uid}.banned: true` checked in `onAuthStateChanged` → redirect if banned
+
+---
+
+### STEP 11 — Mobile Responsive Audit
+
+- [ ] Hero floating images: `hidden` on `xs`, visible on `md:` with smaller sizes
+- [ ] Custom cursor: `hidden md:block` (no cursor on touch devices)
+- [ ] Navigation: hamburger menu implemented, mobile drawer slides in
+- [ ] Product grid: `grid-cols-2` on mobile, `grid-cols-3` on tablet, `grid-cols-4` on desktop
+- [ ] Category grid: `grid-cols-2` on mobile, `grid-cols-4` on desktop
+- [ ] Cart drawer: full-width on mobile, `max-w-md` on desktop
+- [ ] Checkout: single column on mobile, split layout on desktop
+- [ ] Admin sidebar: `hidden md:flex`, mobile hamburger → overlay drawer
+- [ ] All modals: `max-w-screen` on mobile, centered `max-w-md` on desktop
+
+---
+
+### STEP 12 — Final File Completeness Check
+
+Verify all files exist and are fully implemented (no stubs, no empty functions):
+
+**App Pages:**
+- [ ] `src/app/layout.tsx` — fonts, providers, preloader, cursor, navbar, footer, cart drawer, toasts
+- [ ] `src/app/page.tsx` — all 10 landing page sections imported and rendered
+- [ ] `src/app/catalog/page.tsx` — filters, sort, product cache, grid, pagination
+- [ ] `src/app/product/[id]/page.tsx` — gallery, info, variants, add to cart, reviews, related
+- [ ] `src/app/cart/page.tsx` — items, coupon input, order summary, checkout CTA
+- [ ] `src/app/checkout/page.tsx` — 3-step wizard, all 3 payment methods, form validation
+- [ ] `src/app/account/page.tsx` — 4 tabs: profile, addresses, orders, wishlist
+- [ ] `src/app/order/[id]/page.tsx` — order confirmation with confetti / success animation
+- [ ] `src/app/wishlist/page.tsx` — product grid, remove and move to cart
+- [ ] `src/app/admin/page.tsx` — KPI cards, revenue chart, recent orders, low stock
+- [ ] `src/app/admin/products/page.tsx` — full product table, bulk actions, search
+- [ ] `src/app/admin/products/add/page.tsx` — full product form with image uploader
+- [ ] `src/app/admin/products/[id]/page.tsx` — pre-populated edit form
+- [ ] `src/app/admin/orders/page.tsx` — tabbed order table
+- [ ] `src/app/admin/orders/[id]/page.tsx` — order detail, status update, print invoice
+- [ ] `src/app/admin/customers/page.tsx` — customer table, ban/unban
+- [ ] `src/app/admin/marketing/page.tsx` — coupons + banners management
+- [ ] `src/app/admin/settings/page.tsx` — store, delivery, payments, categories tabs
+
+**API Routes:**
+- [ ] `src/app/api/payhere/hash/route.ts` — MD5 hash generator (server-only secret)
+- [ ] `src/app/api/payhere/notify/route.ts` — IPN handler with signature verification + stock deduction
+
+**Components:**
+- [ ] `src/components/layout/Preloader.tsx` — SVG path animation + progress bar
+- [ ] `src/components/layout/CustomCursor.tsx` — spring cursor with grow-on-hover
+- [ ] `src/components/layout/Navbar.tsx` — transparent→glass, categories menu, search overlay
+- [ ] `src/components/layout/Footer.tsx` — dark navy, links, social icons, mini newsletter
+- [ ] `src/components/home/HeroSection.tsx` — full hero with all animations
+- [ ] `src/components/home/TrustBar.tsx` — desktop grid + mobile marquee
+- [ ] `src/components/home/CategoryGrid.tsx` — 3D tilt cards + Firestore data
+- [ ] `src/components/home/FeaturedProducts.tsx` — product grid
+- [ ] `src/components/home/BrandStory.tsx` — split layout with parallax
+- [ ] `src/components/home/BestSellers.tsx` — horizontal scroll snap carousel
+- [ ] `src/components/home/Testimonials.tsx` — auto-scroll + pause on hover
+- [ ] `src/components/home/StatsSection.tsx` — count-up animation
+- [ ] `src/components/home/PromoBanner.tsx` — countdown timer
+- [ ] `src/components/home/Newsletter.tsx` — glassmorphism card + Firestore subscribe
+- [ ] `src/components/ecommerce/ProductCard.tsx` — 3D hover, wishlist, quick view, add-to-cart states
+- [ ] `src/components/ecommerce/CartDrawer.tsx` — spring slide-in from right
+- [ ] `src/components/ecommerce/ProductGallery.tsx` — crossfade + cursor zoom
+- [ ] `src/components/ecommerce/ProductReviews.tsx` — star rating, distribution, write review
+- [ ] `src/components/ecommerce/QuickViewModal.tsx` — full product info in a modal
+- [ ] `src/components/admin/AdminGuard.tsx` — auth + role check
+- [ ] `src/components/admin/ImageUploader.tsx` — drag-drop, compress, upload with progress
+- [ ] `src/components/admin/RevenueChart.tsx` — recharts AreaChart with gradient
+
+**Core:**
+- [ ] `src/store/useStore.ts` — Zustand with all slices + localStorage persist
+- [ ] `src/types/index.ts` — all TypeScript interfaces + STORE constants + SL_DISTRICTS
+- [ ] `src/types/payhere.d.ts` — window.payhere global type declaration
+- [ ] `src/lib/firebase.ts` — modular Firebase v10 client
+- [ ] `src/lib/firebaseAdmin.ts` — Firebase Admin (server-only)
+- [ ] `src/lib/utils.ts` — cn, formatCurrency, generateOrderId, safeFetch, formatDate
+- [ ] `src/hooks/useScrollAnimations.ts` — Lenis + GSAP ScrollTrigger setup
+- [ ] `src/hooks/useCart.ts` — Firestore cart sync on login
+
+**Config:**
+- [ ] `firestore.rules` — full rules (products, orders, users, etc.)
+- [ ] `storage.rules` — products, banners, user avatars
+- [ ] `firestore.indexes.json` — all 5 composite indexes
+- [ ] `.env.example` — all variables documented, no real values
+- [ ] `next.config.ts` — image domains, package imports optimization
+- [ ] `tailwind.config.ts` — full design token system
+- [ ] `package.json` — all dependencies listed
+
+---
+
+## 🎬 WORLD-CLASS UI: ANIMATION FEATURE CHECKLIST
+
+All of the following **MUST** be implemented:
+
+### Motion & Interactions:
+- [ ] Brand preloader: SVG home path draws in (pathLength 0→1), text fades, progress bar fills, exits with scale+fade
+- [ ] Custom cursor: spring-physics tracking, grows on hover over links/buttons, `mix-blend-difference`
+- [ ] Smooth scroll: Lenis with `duration: 1.2`, synced with GSAP ScrollTrigger
+- [ ] Hero: ambient gradient orbs with `animate-pulse-slow`, independent delays
+- [ ] Hero: GSAP TextPlugin rotating words (Beautiful/Elegant/Comfortable/Luxurious/Modern), 3s cycle
+- [ ] Hero: 3 floating product cards with independent Y-axis float animations (6s, 7s, 8s duration)
+- [ ] Hero: parallax — floating cards shift Y on page scroll via Framer Motion `useScroll + useTransform`
+- [ ] Hero: shimmer sweep on primary CTA button hover (`::after` or pseudo overlay)
+- [ ] Hero: scroll indicator mouse icon with bouncing dot
+- [ ] Trust bar: infinite horizontal marquee on mobile
+- [ ] Category grid: 3D perspective tilt (`perspective(1000px) rotateX rotateY`) on mouse move
+- [ ] Category cards: image scale `1→1.1` on hover, green overlay fades in
+- [ ] All sections: scroll-triggered `opacity 0→1, y 40→0` reveals (Framer Motion `whileInView`)
+- [ ] Staggered grid reveals: `staggerChildren: 0.08` on product/category grids
+- [ ] Product cards: `y: -6px` lift on hover, `shadow-card→shadow-card-hover` transition
+- [ ] Product cards: second image crossfade on hover (Framer Motion `AnimatePresence mode="wait"`)
+- [ ] Add to cart: button text transitions ("Add to Cart" → "✓ Added!" → back) with AnimatePresence
+- [ ] Wishlist heart: fills red with scale bounce on toggle
+- [ ] Cart drawer: slides from `x:'100%'` → `x:0` with spring, backdrop blurs behind
+- [ ] Page transitions: `AnimatePresence` wrapping page content with `opacity: 0→1` (root layout)
+- [ ] Stats counter: number count-up animation on first viewport enter (2s duration)
+- [ ] Best sellers: horizontal scroll snap with arrow button controls
+- [ ] Testimonials: auto-scroll marquee, pause on hover
+- [ ] Promo countdown: live setInterval timer with Days:Hours:Mins:Secs
+- [ ] Newsletter: card scales in on viewport enter (`whileInView={{ scale:1 }} initial={{ scale:0.9 }}`)
+- [ ] Loading skeletons: `animate-shimmer` gradient sweeping left-to-right
+- [ ] Toast notifications: slide up from bottom-right (`y: 100→0`), auto-dismiss with fade
+- [ ] Modals: `scale: 0.9→1` + backdrop `opacity: 0→1`
+- [ ] Admin charts: recharts animation enabled (default, no need to set `isAnimationActive:false`)
+- [ ] Number steppers: `whileTap={{ scale:0.85 }}` on +/− buttons
+- [ ] Tab underline: Framer Motion `layoutId="underline"` slide between tabs
+
+### Visual Design:
+- [ ] Deep navy (#0F172A) hero background, cream (#FAFAF7) content sections
+- [ ] Playfair Display for all H1/H2 display headings
+- [ ] Plus Jakarta Sans for all body text
+- [ ] Emerald gradient text: `text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600`
+- [ ] Gold stars and accent badges throughout
+- [ ] Glassmorphism elements: `bg-white/10 backdrop-blur-md border border-white/20`
+- [ ] Card shadows: `shadow-card` default, `shadow-card-hover` on hover
+- [ ] `rounded-3xl` cards universally
+- [ ] Gradient mesh background orbs in hero (no images needed, CSS-only)
+- [ ] Subtle grid pattern overlay in hero section
+- [ ] Admin: clean white cards `bg-white rounded-2xl shadow-card`, slate-50 background
+- [ ] All form inputs: `rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500`
+
+---
+
+*HomeNest LK E-Commerce · Prompt v3 · Next.js 14 + TypeScript + Firebase v10 Modular + Zustand + Framer Motion + GSAP + Lenis · World-Class UI*

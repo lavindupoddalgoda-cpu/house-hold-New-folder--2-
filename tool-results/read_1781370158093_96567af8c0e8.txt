@@ -1,0 +1,766 @@
+  1501→- Tab: Payment Methods → toggles (PayHere / Bank Transfer / COD) + bank account details form → save to `settings/payments`
+  1502→- Tab: Categories → add/edit/delete → fields: name, icon (emoji), displayOrder, active → "Update all products?" prompt on name change
+  1503→
+  1504→---
+  1505→
+  1506→## 🛠️ UTILITIES — `src/lib/utils.ts`
+  1507→
+  1508→```typescript
+  1509→import { clsx, type ClassValue } from 'clsx';
+  1510→import { twMerge } from 'tailwind-merge';
+  1511→
+  1512→export function cn(...inputs: ClassValue[]) { return twMerge(clsx(inputs)); }
+  1513→
+  1514→export function formatCurrency(amount: number): string {
+  1515→  return amount.toLocaleString('en-LK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  1516→}
+  1517→
+  1518→export function generateOrderId(): string {
+  1519→  return 'HN' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+  1520→}
+  1521→
+  1522→export function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number) {
+  1523→  let t: ReturnType;
+  1524→  return (...args: Parameters) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  1525→}
+  1526→
+  1527→export function formatDate(timestamp: { seconds: number }): string {
+  1528→  return new Date(timestamp.seconds * 1000).toLocaleDateString('en-LK', {
+  1529→    day: '2-digit', month: 'short', year: 'numeric',
+  1530→  });
+  1531→}
+  1532→
+  1533→export function isValidSLPhone(phone: string): boolean {
+  1534→  return /^(?:\+94|0)(?:7[01245678])\d{7}$/.test(phone.replace(/[\s-]/g, ''));
+  1535→}
+  1536→
+  1537→// ✅ MANDATORY safe fetch — prevents "Unexpected token '(url: string, options?: RequestInit): Promise {
+  1538→  const res = await fetch(url, options);
+  1539→  if (!res.ok) {
+  1540→    const text = await res.text();
+  1541→    throw new Error(`[${res.status}] ${res.statusText}: ${text.substring(0, 200)}`);
+  1542→  }
+  1543→  return res.json() as Promise;
+  1544→}
+  1545→```
+  1546→
+  1547→---
+  1548→
+  1549→## 🌐 ROOT LAYOUT — `src/app/layout.tsx`
+  1550→
+  1551→```typescript
+  1552→import { Plus_Jakarta_Sans, Cormorant_Garamond, Playfair_Display } from 'next/font/google';
+  1553→
+  1554→// Load all 3 fonts, assign CSS variables:
+  1555→//   --font-plus-jakarta, --font-cormorant, --font-playfair
+  1556→
+  1557→// Layout structure:
+  1558→// 
+  1559→//   
+  1560→//              ← client-side context providers
+  1561→//            ← brand animation, hides after 1.5s
+  1562→//         ← spring cursor (desktop only)
+  1563→//               ← sticky, transparent → frosted glass
+  1564→//       {children}
+  1565→//               ← dark navy, links + newsletter mini-form
+  1566→//           ← slide-in from right (AnimatePresence)
+  1567→//        ← bottom-right toast stack
+  1568→//     
+  1569→//   
+  1570→// 
+  1571→
+  1572→// Metadata: title template "%s | HomeNest LK", description, OpenGraph, keywords
+  1573→```
+  1574→
+  1575→### `src/app/providers.tsx`
+  1576→```typescript
+  1577→'use client';
+  1578→// Wrap children in:
+  1579→// - React Query Provider (if used)
+  1580→// - Auth listener: onAuthStateChanged → setUser in Zustand
+  1581→// - Lenis smooth scroll initializer (useScrollAnimations hook)
+  1582→// - ThemeProvider (next-themes, defaultTheme: "light")
+  1583→```
+  1584→
+  1585→---
+  1586→
+  1587→## 🗄️ FIRESTORE SCHEMA
+  1588→
+  1589→```
+  1590→/products/{productId}
+  1591→  productName, sku, category, brand, shortDescription, description
+  1592→  costPrice, sellingPrice, discountPrice (0 = no discount), stock, weight
+  1593→  dimensions: { length, width, height }
+  1594→  variants: [{ type, values: string[] }]
+  1595→  tags: string[], featured: boolean, isActive: boolean
+  1596→  images: string[], thumbnails: string[]
+  1597→  createdAt, updatedAt: Timestamp
+  1598→
+  1599→/orders/{orderId}
+  1600→  userId, customer: { firstName, lastName, email, phone }
+  1601→  items: [{ productId, productName, image, price, quantity, variant }]
+  1602→  subtotal, shippingFee, discount, total
+  1603→  couponCode: string|null, paymentMethod, paymentStatus
+  1604→  status, shippingAddress: { line1, line2, city, district, postalCode, country }
+  1605→  deliveryType, trackingNumber: string|null
+  1606→  createdAt, updatedAt: Timestamp
+  1607→
+  1608→/users/{uid}
+  1609→  displayName, email, phone, role, photoURL, banned: boolean, createdAt
+  1610→  /addresses/{id}: { label, line1, line2, city, district, postalCode, country, isDefault }
+  1611→  /wishlist/{productId}: { productId, addedAt }
+  1612→  /cart (single doc): { items: CartItem[], updatedAt }
+  1613→
+  1614→/categories/{id}   : { name, icon, imageURL, displayOrder, isActive }
+  1615→/coupons/{code}    : { type, value, minOrderValue, maxUses, usedCount, expiresAt, isActive }
+  1616→/reviews/{id}      : { productId, userId, displayName, rating, text, isApproved, createdAt }
+  1617→/banners/{id}      : { title, subtitle, ctaText, ctaLink, imageURL, displayOrder, isActive }
+  1618→/promotions/{id}   : { title, subtitle, ctaText, ctaLink, discount, code, expiresAt, isActive }
+  1619→/newsletter/{id}   : { email, subscribedAt }
+  1620→/settings/store    : { name, tagline, email, phone, address }
+  1621→/settings/delivery : { freeShippingThreshold, standardFee, expressFee, districtOverrides: {} }
+  1622→/settings/payments : { payhere, bankTransfer, cod, bankDetails: { bankName, accountName, accountNumber, branch } }
+  1623→```
+  1624→
+  1625→---
+  1626→
+  1627→## 📋 FIRESTORE INDEXES — `firestore.indexes.json`
+  1628→
+  1629→```json
+  1630→{
+  1631→  "indexes": [
+  1632→    {
+  1633→      "collectionGroup": "products",
+  1634→      "queryScope": "COLLECTION",
+  1635→      "fields": [
+  1636→        { "fieldPath": "isActive",  "order": "ASCENDING" },
+  1637→        { "fieldPath": "featured",  "order": "ASCENDING" },
+  1638→        { "fieldPath": "createdAt", "order": "DESCENDING" }
+  1639→      ]
+  1640→    },
+  1641→    {
+  1642→      "collectionGroup": "products",
+  1643→      "queryScope": "COLLECTION",
+  1644→      "fields": [
+  1645→        { "fieldPath": "isActive",  "order": "ASCENDING" },
+  1646→        { "fieldPath": "createdAt", "order": "DESCENDING" }
+  1647→      ]
+  1648→    },
+  1649→    {
+  1650→      "collectionGroup": "orders",
+  1651→      "queryScope": "COLLECTION",
+  1652→      "fields": [
+  1653→        { "fieldPath": "userId",    "order": "ASCENDING" },
+  1654→        { "fieldPath": "createdAt", "order": "DESCENDING" }
+  1655→      ]
+  1656→    },
+  1657→    {
+  1658→      "collectionGroup": "orders",
+  1659→      "queryScope": "COLLECTION",
+  1660→      "fields": [
+  1661→        { "fieldPath": "status",    "order": "ASCENDING" },
+  1662→        { "fieldPath": "createdAt", "order": "DESCENDING" }
+  1663→      ]
+  1664→    },
+  1665→    {
+  1666→      "collectionGroup": "reviews",
+  1667→      "queryScope": "COLLECTION",
+  1668→      "fields": [
+  1669→        { "fieldPath": "productId",  "order": "ASCENDING" },
+  1670→        { "fieldPath": "isApproved", "order": "ASCENDING" },
+  1671→        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+  1672→      ]
+  1673→    }
+  1674→  ],
+  1675→  "fieldOverrides": []
+  1676→}
+  1677→```
+  1678→
+  1679→---
+  1680→
+  1681→## 📋 FIRESTORE RULES — `firestore.rules`
+  1682→
+  1683→```
+  1684→rules_version = '2';
+  1685→service cloud.firestore {
+  1686→  match /databases/{database}/documents {
+  1687→
+  1688→    function isAuthed()  { return request.auth != null; }
+  1689→    function getRole()   { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+  1690→    function isAdmin()   { return isAuthed() && getRole() == 'admin'; }
+  1691→    function isManager() { return isAuthed() && (getRole() == 'admin' || getRole() == 'manager'); }
+  1692→    function isOwner(uid){ return isAuthed() && request.auth.uid == uid; }
+  1693→    function notBanned() { return !get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('banned', false); }
+  1694→
+  1695→    match /products/{id} {
+  1696→      allow read: if resource.data.isActive == true || isAdmin();
+  1697→      allow create, update, delete: if isAdmin();
+  1698→    }
+  1699→    match /orders/{id} {
+  1700→      allow create: if isAuthed() && notBanned();
+  1701→      allow read:   if isOwner(resource.data.userId) || isManager();
+  1702→      allow update: if isManager();
+  1703→      allow delete: if isAdmin();
+  1704→    }
+  1705→    match /users/{uid} {
+  1706→      allow read:   if isOwner(uid) || isManager();
+  1707→      allow update: if isOwner(uid) || isAdmin();
+  1708→      allow create: if isAuthed() && request.auth.uid == uid;
+  1709→      allow delete: if isAdmin();
+  1710→      allow list:   if isManager();
+  1711→      match /addresses/{addrId} { allow read, write: if isOwner(uid); }
+  1712→      match /wishlist/{prodId}  { allow read, write: if isOwner(uid); }
+  1713→      match /cart/{any}         { allow read, write: if isOwner(uid); }
+  1714→    }
+  1715→    match /categories/{id}  { allow read: if true;       allow write: if isAdmin(); }
+  1716→    match /banners/{id}     { allow read: if true;       allow write: if isAdmin(); }
+  1717→    match /promotions/{id}  { allow read: if true;       allow write: if isAdmin(); }
+  1718→    match /settings/{id}    { allow read: if true;       allow write: if isAdmin(); }
+  1719→    match /coupons/{code}   { allow read: if isAuthed(); allow write: if isAdmin(); }
+  1720→    match /reviews/{id} {
+  1721→      allow read:   if resource.data.isApproved == true || isAdmin();
+  1722→      allow create: if isAuthed() && notBanned() && request.resource.data.userId == request.auth.uid;
+  1723→      allow update, delete: if isAdmin();
+  1724→    }
+  1725→    match /newsletter/{id}  { allow create: if true; allow read, write: if isAdmin(); }
+  1726→    match /mail/{id}        { allow read, write: if false; }
+  1727→  }
+  1728→}
+  1729→```
+  1730→
+  1731→---
+  1732→
+  1733→## 📋 STORAGE RULES — `storage.rules`
+  1734→
+  1735→```
+  1736→rules_version = '2';
+  1737→service firebase.storage {
+  1738→  match /b/{bucket}/o {
+  1739→    match /products/{allPaths=**} {
+  1740→      allow read: if true;
+  1741→      allow write: if request.auth != null
+  1742→        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+  1743→        && request.resource.size < 6 * 1024 * 1024
+  1744→        && request.resource.contentType.matches('image/.*');
+  1745→    }
+  1746→    match /banners/{allPaths=**} {
+  1747→      allow read: if true;
+  1748→      allow write: if request.auth != null
+  1749→        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+  1750→        && request.resource.size < 6 * 1024 * 1024;
+  1751→    }
+  1752→    match /users/{uid}/{allPaths=**} {
+  1753→      allow read: if true;
+  1754→      allow write: if request.auth.uid == uid
+  1755→        && request.resource.size < 2 * 1024 * 1024
+  1756→        && request.resource.contentType.matches('image/.*');
+  1757→    }
+  1758→  }
+  1759→}
+  1760→```
+  1761→
+  1762→---
+  1763→
+  1764→## 🌱 SEED DATA FUNCTION
+  1765→
+  1766→Include a `seedDatabase()` function (guarded by `process.env.NODE_ENV === 'development'`) callable from browser console:
+  1767→
+  1768→**Categories (6):**
+  1769→
+  1770→|
+  1771→ Category     
+  1772→|
+  1773→ Icon 
+  1774→|
+  1775→ Unsplash Image 
+  1776→|
+  1777→|
+  1778→-------------
+  1779→|
+  1780→------
+  1781→|
+  1782→----------------
+  1783→|
+  1784→|
+  1785→ Kitchen      
+  1786→|
+  1787→ 🍳   
+  1788→|
+  1789→`photo-1556909114-f6e7ad7d3136`
+  1790→|
+  1791→|
+  1792→ Bedroom      
+  1793→|
+  1794→ 🛏️   
+  1795→|
+  1796→`photo-1586105251261-72a756497a11`
+  1797→|
+  1798→|
+  1799→ Bathroom     
+  1800→|
+  1801→ 🚿   
+  1802→|
+  1803→`photo-1552321554-5fefe8c9ef14`
+  1804→|
+  1805→|
+  1806→ Living Room  
+  1807→|
+  1808→ 🛋️   
+  1809→|
+  1810→`photo-1555041469-a586c61ea9bc`
+  1811→|
+  1812→|
+  1813→ Storage      
+  1814→|
+  1815→ 📦   
+  1816→|
+  1817→`photo-1558618666-fcd25c85cd64`
+  1818→|
+  1819→|
+  1820→ Cleaning     
+  1821→|
+  1822→ 🧹   
+  1823→|
+  1824→`photo-1563453392212-326f5e854473`
+  1825→|
+  1826→
+  1827→**Products (12 sample):** Rice cooker (Rs. 5,500), Bedsheet Set (Rs. 3,200), Premium Towel Set (Rs. 1,850), Sofa Throw Blanket (Rs. 2,100), Bamboo Storage Basket (Rs. 950), Ceramic Dinner Set (Rs. 7,800), LED Desk Lamp (Rs. 4,400), Plant Stand (Rs. 1,200), Knife Set (Rs. 6,500), Blackout Curtains (Rs. 8,900), Essential Oil Diffuser (Rs. 3,600), Laundry Organizer (Rs. 1,450)
+  1828→
+  1829→All product images: relevant Unsplash photos at `?w=800&q=80`
+  1830→
+  1831→---
+  1832→
+  1833→## 🌐 DEPLOYMENT GUIDE
+  1834→
+  1835→```
+  1836→PREREQUISITES:
+  1837→  - Node.js 20+
+  1838→  - npm install
+  1839→  - Firebase project at console.firebase.google.com
+  1840→  - Enable: Firestore, Storage, Auth (Email/Password + Google), Hosting (optional)
+  1841→
+  1842→STEP 1 — Local development:
+  1843→  cp .env.example .env.local
+  1844→  # Fill in all values in .env.local
+  1845→  npm run dev → http://localhost:3000
+  1846→
+  1847→STEP 2 — Deploy Firebase rules & indexes:
+  1848→  npm install -g firebase-tools
+  1849→  firebase login
+  1850→  firebase use --add   (select project)
+  1851→  firebase deploy --only firestore:rules,firestore:indexes,storage:rules
+  1852→
+  1853→STEP 3 — Deploy to Vercel:
+  1854→  npx vercel login
+  1855→  npx vercel
+  1856→  # OR: import GitHub repo at vercel.com → Framework: Next.js (auto-detected)
+  1857→
+  1858→STEP 4 — Set environment variables on Vercel:
+  1859→  Vercel Dashboard → Project → Settings → Environment Variables
+  1860→  Add all variables from .env.example with real values
+  1861→  NEVER put PAYHERE_MERCHANT_SECRET or FIREBASE_ADMIN_PRIVATE_KEY in a NEXT_PUBLIC_ var
+  1862→
+  1863→STEP 5 — First admin account:
+  1864→  Register in-app with email === NEXT_PUBLIC_ADMIN_EMAIL value
+  1865→  App auto-sets role:"admin" on first registration for this email
+  1866→  Navigate to /admin to access dashboard
+  1867→
+  1868→STEP 6 — Seed sample data:
+  1869→  Open browser console on localhost:3000
+  1870→  Run: seedDatabase()
+  1871→  Adds categories + sample products + banners
+  1872→```
+  1873→
+  1874→---
+  1875→
+  1876→## ✅ SECTION 14 — AI AGENT: MANDATORY TROUBLESHOOTING PROTOCOL
+  1877→
+  1878→**YOU MUST COMPLETE ALL 12 STEPS BELOW BEFORE PRESENTING ANY FILES. NO EXCEPTIONS.**
+  1879→
+  1880→---
+  1881→
+  1882→### STEP 1 — TypeScript Strict Check
+  1883→```bash
+  1884→npx tsc --noEmit
+  1885→```
+  1886→**Fix every error. Common issues:**
+  1887→- Missing `'use client'` on components using hooks
+  1888→- Firebase DocumentData not typed → use `as Product` cast after `doc.data()`
+  1889→- Framer Motion `motion.div` variant prop types
+  1890→- Missing `key` props in mapped JSX
+  1891→- `window.payhere` not recognized → verify `src/types/payhere.d.ts` exists
+  1892→
+  1893→---
+  1894→
+  1895→### STEP 2 — ESLint Zero Warnings
+  1896→```bash
+  1897→npx eslint src --ext .ts,.tsx --max-warnings 0
+  1898→```
+  1899→**Fix:** unused imports, missing useEffect deps (add `// eslint-disable-next-line` with comment if intentional), unsafe `any` usage.
+  1900→
+  1901→---
+  1902→
+  1903→### STEP 3 — Build Must Succeed
+  1904→```bash
+  1905→npm run build
+  1906→```
+  1907→**Common build failures and fixes:**
+  1908→- `"'X' is not a module"` → check `next.config.ts` `optimizePackageImports` array
+  1909→- `"window is not defined"` → component needs `'use client'` or `typeof window !== 'undefined'` guard
+  1910→- `"Cannot use import statement outside a module"` → firebase-admin must only be imported in API routes (server-side)
+  1911→- `"next/image: Required"` → all `<Image>` need `width+height` or `fill` prop
+  1912→- GSAP `ScrollTrigger.register()` in `useEffect` → no SSR issue; if still failing, dynamic import GSAP
+  1913→
+  1914→---
+  1915→
+  1916→### STEP 4 — Environment Variable Audit
+  1917→```
+  1918→SCAN EVERY FILE for these violations:
+  1919→❌ process.env.PAYHERE_MERCHANT_SECRET in any /src/app/ file NOT in /src/app/api/
+  1920→❌ process.env.FIREBASE_ADMIN_PRIVATE_KEY in any client component
+  1921→❌ process.env.FIREBASE_ADMIN_CLIENT_EMAIL in any client component
+  1922→❌ Hardcoded merchant IDs, API keys, or any secret string
+  1923→❌ Any env var without NEXT_PUBLIC_ prefix referenced in a 'use client' file
+  1924→
+  1925→✅ CORRECT: NEXT_PUBLIC_* vars in client components
+  1926→✅ CORRECT: Non-NEXT_PUBLIC_ secrets ONLY in /src/app/api/ route files and /src/lib/firebaseAdmin.ts
+  1927→```
+  1928→
+  1929→---
+  1930→
+  1931→### STEP 5 — API Route Simulation Check
+  1932→
+  1933→Mentally trace each scenario and verify the code handles it:
+  1934→
+  1935→|
+  1936→ Route 
+  1937→|
+  1938→ Input 
+  1939→|
+  1940→ Expected Output 
+  1941→|
+  1942→|
+  1943→-------
+  1944→|
+  1945→-------
+  1946→|
+  1947→----------------
+  1948→|
+  1949→|
+  1950→`POST /api/payhere/hash`
+  1951→|
+  1952→ Missing 
+  1953→`orderId`
+  1954→|
+  1955→ 400 JSON 
+  1956→`{ error: "Missing required fields" }`
+  1957→|
+  1958→|
+  1959→`POST /api/payhere/hash`
+  1960→|
+  1961→ Valid body 
+  1962→|
+  1963→ 200 JSON 
+  1964→`{ hash: "ABC123...", merchantId: "..." }`
+  1965→|
+  1966→|
+  1967→`POST /api/payhere/notify`
+  1968→|
+  1969→ Wrong 
+  1970→`md5sig`
+  1971→|
+  1972→ 400 JSON 
+  1973→`{ error: "Invalid signature" }`
+  1974→|
+  1975→|
+  1976→`POST /api/payhere/notify`
+  1977→|
+  1978→`status_code: "2"`
+  1979→|
+  1980→ Updates order to 
+  1981→`paid`
+  1982→, deducts stock via batch 
+  1983→|
+  1984→|
+  1985→`POST /api/payhere/notify`
+  1986→|
+  1987→`status_code: "-1"`
+  1988→|
+  1989→ Updates order to 
+  1990→`cancelled`
+  1991→|
+  1992→|
+  1993→ Any route 
+  1994→|
+  1995→ Server throws 
+  1996→|
+  1997→ 500 JSON 
+  1998→`{ error: "Internal server error" }`
+  1999→|
+  2000→
+  2001→---
+  2002→
+  2003→### STEP 6 — res.ok Safety Audit (Critical — Prevents "Unexpected token '<'" Bug)
+  2004→```
+  2005→Search for ALL .json() calls in client code:
+  2006→grep -rn "\.json()" src --include="*.tsx" --include="*.ts" | grep -v "api/" | grep -v "lib/"
+  2007→```
+  2008→**Every single result MUST have a `res.ok` check immediately before it.** Fix any that don't:
+  2009→```typescript
+  2010→// ❌ WRONG — crashes with "Unexpected token '<'" when API returns HTML error page
+  2011→const data = await fetch('/api/something').then(r => r.json());
+  2012→
+  2013→// ✅ CORRECT
+  2014→const res = await fetch('/api/something');
+  2015→if (!res.ok) {
+  2016→  const errorText = await res.text();
+  2017→  console.error('API error:', errorText.substring(0, 200));
+  2018→  addToast({ message: 'Something went wrong. Please try again.', type: 'error' });
+  2019→  return;
+  2020→}
+  2021→const data = await res.json();
+  2022→```
+  2023→
+  2024→---
+  2025→
+  2026→### STEP 7 — Firestore Composite Index Verification
+  2027→
+  2028→Every Firestore query using `where()` + `orderBy()` on different fields needs a composite index. Verify all present in `firestore.indexes.json`:
+  2029→
+  2030→|
+  2031→ Query 
+  2032→|
+  2033→ Needs Index? 
+  2034→|
+  2035→|
+  2036→-------
+  2037→|
+  2038→-------------
+  2039→|
+  2040→|
+  2041→`products`
+  2042→ where 
+  2043→`isActive + featured`
+  2044→ orderBy 
+  2045→`createdAt`
+  2046→|
+  2047→ ✅ Required 
+  2048→|
+  2049→|
+  2050→`products`
+  2051→ where 
+  2052→`isActive`
+  2053→ orderBy 
+  2054→`createdAt`
+  2055→|
+  2056→ ✅ Required 
+  2057→|
+  2058→|
+  2059→`orders`
+  2060→ where 
+  2061→`userId`
+  2062→ orderBy 
+  2063→`createdAt`
+  2064→|
+  2065→ ✅ Required 
+  2066→|
+  2067→|
+  2068→`orders`
+  2069→ where 
+  2070→`status`
+  2071→ orderBy 
+  2072→`createdAt`
+  2073→|
+  2074→ ✅ Required 
+  2075→|
+  2076→|
+  2077→`reviews`
+  2078→ where 
+  2079→`productId + isApproved`
+  2080→ orderBy 
+  2081→`createdAt`
+  2082→|
+  2083→ ✅ Required 
+  2084→|
+  2085→
+  2086→If any new queries were added during implementation, add them to `firestore.indexes.json`.
+  2087→
+  2088→---
+  2089→
+  2090→### STEP 8 — Animation Library Checks
+  2091→
+  2092→Verify:
+  2093→- [ ] Every `<AnimatePresence>` child has a `key` prop
+  2094→- [ ] Every GSAP animation is cleaned up: `return () => { tl.kill(); ScrollTrigger.getAll().forEach(t => t.kill()); }`
+  2095→- [ ] Lenis is destroyed on unmount: `return () => { lenis.destroy(); }`
+  2096→- [ ] No GSAP/Framer Motion imports in Server Components (files without `'use client'`)
+  2097→- [ ] `gsap.registerPlugin(ScrollTrigger, TextPlugin)` is called inside `useEffect`, not at module level
+  2098→- [ ] Lenis doesn't conflict with native scroll on touch devices (Lenis `syncToNative: true` for iOS)
+  2099→- [ ] Custom cursor div has `hidden md:block` (invisible on touch devices, doesn't interfere)
+  2100→
+  2101→---
+  2102→
+  2103→### STEP 9 — Image Optimization Audit
+  2104→
+  2105→- [ ] All `<img>` tags in **storefront** components replaced with `next/image <Image />` where src is a known remote domain
+  2106→- [ ] All `next/image` components have either `width + height` OR `fill` (with `relative` parent container)
+  2107→- [ ] `next.config.ts` `remotePatterns` includes: `firebasestorage.googleapis.com`, `images.unsplash.com`, `lh3.googleusercontent.com`
+  2108→- [ ] All Unsplash URLs include `?w=800&q=80` (or appropriate width) to avoid loading full-res images
+  2109→- [ ] Product thumbnails use smaller URLs: `?w=400&q=80`
+  2110→- [ ] Hero background images use: `?w=1400&q=70`
+  2111→
+  2112→---
+  2113→
+  2114→### STEP 10 — Security Checklist
+  2115→
+  2116→- [ ] `PAYHERE_MERCHANT_SECRET` appears ONLY in `/src/app/api/payhere/hash/route.ts` and `/src/app/api/payhere/notify/route.ts`
+  2117→- [ ] PayHere notify handler verifies MD5 signature BEFORE reading order data or updating Firestore
+  2118→- [ ] All admin pages wrapped in `<AdminGuard />` checking Firestore role, not just Firebase Auth
+  2119→- [ ] Firestore rules: non-admin users cannot read `isActive: false` products
+  2120→- [ ] Cart quantity capped at `Math.min(newQty, item.stock)` — cannot exceed stock level
+  2121→- [ ] Review submission requires `isAuthed() && notBanned()` per Firestore rules
+  2122→- [ ] User banning: `users/{uid}.banned: true` checked in `onAuthStateChanged` → redirect if banned
+  2123→
+  2124→---
+  2125→
+  2126→### STEP 11 — Mobile Responsive Audit
+  2127→
+  2128→- [ ] Hero floating images: `hidden` on `xs`, visible on `md:` with smaller sizes
+  2129→- [ ] Custom cursor: `hidden md:block` (no cursor on touch devices)
+  2130→- [ ] Navigation: hamburger menu implemented, mobile drawer slides in
+  2131→- [ ] Product grid: `grid-cols-2` on mobile, `grid-cols-3` on tablet, `grid-cols-4` on desktop
+  2132→- [ ] Category grid: `grid-cols-2` on mobile, `grid-cols-4` on desktop
+  2133→- [ ] Cart drawer: full-width on mobile, `max-w-md` on desktop
+  2134→- [ ] Checkout: single column on mobile, split layout on desktop
+  2135→- [ ] Admin sidebar: `hidden md:flex`, mobile hamburger → overlay drawer
+  2136→- [ ] All modals: `max-w-screen` on mobile, centered `max-w-md` on desktop
+  2137→
+  2138→---
+  2139→
+  2140→### STEP 12 — Final File Completeness Check
+  2141→
+  2142→Verify all files exist and are fully implemented (no stubs, no empty functions):
+  2143→
+  2144→**App Pages:**
+  2145→- [ ] `src/app/layout.tsx` — fonts, providers, preloader, cursor, navbar, footer, cart drawer, toasts
+  2146→- [ ] `src/app/page.tsx` — all 10 landing page sections imported and rendered
+  2147→- [ ] `src/app/catalog/page.tsx` — filters, sort, product cache, grid, pagination
+  2148→- [ ] `src/app/product/[id]/page.tsx` — gallery, info, variants, add to cart, reviews, related
+  2149→- [ ] `src/app/cart/page.tsx` — items, coupon input, order summary, checkout CTA
+  2150→- [ ] `src/app/checkout/page.tsx` — 3-step wizard, all 3 payment methods, form validation
+  2151→- [ ] `src/app/account/page.tsx` — 4 tabs: profile, addresses, orders, wishlist
+  2152→- [ ] `src/app/order/[id]/page.tsx` — order confirmation with confetti / success animation
+  2153→- [ ] `src/app/wishlist/page.tsx` — product grid, remove and move to cart
+  2154→- [ ] `src/app/admin/page.tsx` — KPI cards, revenue chart, recent orders, low stock
+  2155→- [ ] `src/app/admin/products/page.tsx` — full product table, bulk actions, search
+  2156→- [ ] `src/app/admin/products/add/page.tsx` — full product form with image uploader
+  2157→- [ ] `src/app/admin/products/[id]/page.tsx` — pre-populated edit form
+  2158→- [ ] `src/app/admin/orders/page.tsx` — tabbed order table
+  2159→- [ ] `src/app/admin/orders/[id]/page.tsx` — order detail, status update, print invoice
+  2160→- [ ] `src/app/admin/customers/page.tsx` — customer table, ban/unban
+  2161→- [ ] `src/app/admin/marketing/page.tsx` — coupons + banners management
+  2162→- [ ] `src/app/admin/settings/page.tsx` — store, delivery, payments, categories tabs
+  2163→
+  2164→**API Routes:**
+  2165→- [ ] `src/app/api/payhere/hash/route.ts` — MD5 hash generator (server-only secret)
+  2166→- [ ] `src/app/api/payhere/notify/route.ts` — IPN handler with signature verification + stock deduction
+  2167→
+  2168→**Components:**
+  2169→- [ ] `src/components/layout/Preloader.tsx` — SVG path animation + progress bar
+  2170→- [ ] `src/components/layout/CustomCursor.tsx` — spring cursor with grow-on-hover
+  2171→- [ ] `src/components/layout/Navbar.tsx` — transparent→glass, categories menu, search overlay
+  2172→- [ ] `src/components/layout/Footer.tsx` — dark navy, links, social icons, mini newsletter
+  2173→- [ ] `src/components/home/HeroSection.tsx` — full hero with all animations
+  2174→- [ ] `src/components/home/TrustBar.tsx` — desktop grid + mobile marquee
+  2175→- [ ] `src/components/home/CategoryGrid.tsx` — 3D tilt cards + Firestore data
+  2176→- [ ] `src/components/home/FeaturedProducts.tsx` — product grid
+  2177→- [ ] `src/components/home/BrandStory.tsx` — split layout with parallax
+  2178→- [ ] `src/components/home/BestSellers.tsx` — horizontal scroll snap carousel
+  2179→- [ ] `src/components/home/Testimonials.tsx` — auto-scroll + pause on hover
+  2180→- [ ] `src/components/home/StatsSection.tsx` — count-up animation
+  2181→- [ ] `src/components/home/PromoBanner.tsx` — countdown timer
+  2182→- [ ] `src/components/home/Newsletter.tsx` — glassmorphism card + Firestore subscribe
+  2183→- [ ] `src/components/ecommerce/ProductCard.tsx` — 3D hover, wishlist, quick view, add-to-cart states
+  2184→- [ ] `src/components/ecommerce/CartDrawer.tsx` — spring slide-in from right
+  2185→- [ ] `src/components/ecommerce/ProductGallery.tsx` — crossfade + cursor zoom
+  2186→- [ ] `src/components/ecommerce/ProductReviews.tsx` — star rating, distribution, write review
+  2187→- [ ] `src/components/ecommerce/QuickViewModal.tsx` — full product info in a modal
+  2188→- [ ] `src/components/admin/AdminGuard.tsx` — auth + role check
+  2189→- [ ] `src/components/admin/ImageUploader.tsx` — drag-drop, compress, upload with progress
+  2190→- [ ] `src/components/admin/RevenueChart.tsx` — recharts AreaChart with gradient
+  2191→
+  2192→**Core:**
+  2193→- [ ] `src/store/useStore.ts` — Zustand with all slices + localStorage persist
+  2194→- [ ] `src/types/index.ts` — all TypeScript interfaces + STORE constants + SL_DISTRICTS
+  2195→- [ ] `src/types/payhere.d.ts` — window.payhere global type declaration
+  2196→- [ ] `src/lib/firebase.ts` — modular Firebase v10 client
+  2197→- [ ] `src/lib/firebaseAdmin.ts` — Firebase Admin (server-only)
+  2198→- [ ] `src/lib/utils.ts` — cn, formatCurrency, generateOrderId, safeFetch, formatDate
+  2199→- [ ] `src/hooks/useScrollAnimations.ts` — Lenis + GSAP ScrollTrigger setup
+  2200→- [ ] `src/hooks/useCart.ts` — Firestore cart sync on login
+  2201→
+  2202→**Config:**
+  2203→- [ ] `firestore.rules` — full rules (products, orders, users, etc.)
+  2204→- [ ] `storage.rules` — products, banners, user avatars
+  2205→- [ ] `firestore.indexes.json` — all 5 composite indexes
+  2206→- [ ] `.env.example` — all variables documented, no real values
+  2207→- [ ] `next.config.ts` — image domains, package imports optimization
+  2208→- [ ] `tailwind.config.ts` — full design token system
+  2209→- [ ] `package.json` — all dependencies listed
+  2210→
+  2211→---
+  2212→
+  2213→## 🎬 WORLD-CLASS UI: ANIMATION FEATURE CHECKLIST
+  2214→
+  2215→All of the following **MUST** be implemented:
+  2216→
+  2217→### Motion & Interactions:
+  2218→- [ ] Brand preloader: SVG home path draws in (pathLength 0→1), text fades, progress bar fills, exits with scale+fade
+  2219→- [ ] Custom cursor: spring-physics tracking, grows on hover over links/buttons, `mix-blend-difference`
+  2220→- [ ] Smooth scroll: Lenis with `duration: 1.2`, synced with GSAP ScrollTrigger
+  2221→- [ ] Hero: ambient gradient orbs with `animate-pulse-slow`, independent delays
+  2222→- [ ] Hero: GSAP TextPlugin rotating words (Beautiful/Elegant/Comfortable/Luxurious/Modern), 3s cycle
+  2223→- [ ] Hero: 3 floating product cards with independent Y-axis float animations (6s, 7s, 8s duration)
+  2224→- [ ] Hero: parallax — floating cards shift Y on page scroll via Framer Motion `useScroll + useTransform`
+  2225→- [ ] Hero: shimmer sweep on primary CTA button hover (`::after` or pseudo overlay)
+  2226→- [ ] Hero: scroll indicator mouse icon with bouncing dot
+  2227→- [ ] Trust bar: infinite horizontal marquee on mobile
+  2228→- [ ] Category grid: 3D perspective tilt (`perspective(1000px) rotateX rotateY`) on mouse move
+  2229→- [ ] Category cards: image scale `1→1.1` on hover, green overlay fades in
+  2230→- [ ] All sections: scroll-triggered `opacity 0→1, y 40→0` reveals (Framer Motion `whileInView`)
+  2231→- [ ] Staggered grid reveals: `staggerChildren: 0.08` on product/category grids
+  2232→- [ ] Product cards: `y: -6px` lift on hover, `shadow-card→shadow-card-hover` transition
+  2233→- [ ] Product cards: second image crossfade on hover (Framer Motion `AnimatePresence mode="wait"`)
+  2234→- [ ] Add to cart: button text transitions ("Add to Cart" → "✓ Added!" → back) with AnimatePresence
+  2235→- [ ] Wishlist heart: fills red with scale bounce on toggle
+  2236→- [ ] Cart drawer: slides from `x:'100%'` → `x:0` with spring, backdrop blurs behind
+  2237→- [ ] Page transitions: `AnimatePresence` wrapping page content with `opacity: 0→1` (root layout)
+  2238→- [ ] Stats counter: number count-up animation on first viewport enter (2s duration)
+  2239→- [ ] Best sellers: horizontal scroll snap with arrow button controls
+  2240→- [ ] Testimonials: auto-scroll marquee, pause on hover
+  2241→- [ ] Promo countdown: live setInterval timer with Days:Hours:Mins:Secs
+  2242→- [ ] Newsletter: card scales in on viewport enter (`whileInView={{ scale:1 }} initial={{ scale:0.9 }}`)
+  2243→- [ ] Loading skeletons: `animate-shimmer` gradient sweeping left-to-right
+  2244→- [ ] Toast notifications: slide up from bottom-right (`y: 100→0`), auto-dismiss with fade
+  2245→- [ ] Modals: `scale: 0.9→1` + backdrop `opacity: 0→1`
+  2246→- [ ] Admin charts: recharts animation enabled (default, no need to set `isAnimationActive:false`)
+  2247→- [ ] Number steppers: `whileTap={{ scale:0.85 }}` on +/− buttons
+  2248→- [ ] Tab underline: Framer Motion `layoutId="underline"` slide between tabs
+  2249→
+  2250→### Visual Design:
+  2251→- [ ] Deep navy (#0F172A) hero background, cream (#FAFAF7) content sections
+  2252→- [ ] Playfair Display for all H1/H2 display headings
+  2253→- [ ] Plus Jakarta Sans for all body text
+  2254→- [ ] Emerald gradient text: `text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600`
+  2255→- [ ] Gold stars and accent badges throughout
+  2256→- [ ] Glassmorphism elements: `bg-white/10 backdrop-blur-md border border-white/20`
+  2257→- [ ] Card shadows: `shadow-card` default, `shadow-card-hover` on hover
+  2258→- [ ] `rounded-3xl` cards universally
+  2259→- [ ] Gradient mesh background orbs in hero (no images needed, CSS-only)
+  2260→- [ ] Subtle grid pattern overlay in hero section
+  2261→- [ ] Admin: clean white cards `bg-white rounded-2xl shadow-card`, slate-50 background
+  2262→- [ ] All form inputs: `rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500`
+  2263→
+  2264→---
+  2265→
+  2266→*HomeNest LK E-Commerce · Prompt v3 · Next.js 14 + TypeScript + Firebase v10 Modular + Zustand + Framer Motion + GSAP + Lenis · World-Class UI*
